@@ -4,9 +4,12 @@ import { ShoppingCart, User, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
+import { useCart } from "@/contexts/CartContext";
+import { Badge } from "@/components/ui/badge";
 
 export const Navbar = () => {
   const navigate = useNavigate();
+  const { totalItems } = useCart();
   const [user, setUser] = useState<SupabaseUser | null>(null);
 
   useEffect(() => {
@@ -43,9 +46,17 @@ export const Navbar = () => {
           
           {user ? (
             <>
-              <Button variant="ghost" size="icon" asChild>
+              <Button variant="ghost" size="icon" asChild className="relative">
                 <Link to="/cart">
                   <ShoppingCart className="h-5 w-5" />
+                  {totalItems > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {totalItems}
+                    </Badge>
+                  )}
                 </Link>
               </Button>
               <Button variant="ghost" size="icon" asChild>

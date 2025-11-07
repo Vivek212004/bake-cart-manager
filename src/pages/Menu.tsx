@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Category {
   id: string;
@@ -26,10 +28,13 @@ interface Product {
 }
 
 const Menu = () => {
+  const { addItem } = useCart();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedVariation, setSelectedVariation] = useState<string>("");
 
   useEffect(() => {
     fetchData();
@@ -66,6 +71,29 @@ const Menu = () => {
 
   const formatPrice = (price: number) => {
     return `₹${price.toFixed(0)}`;
+  };
+
+  const handleAddToCart = (product: Product, variation?: string, price?: number) => {
+    const finalPrice = price || product.base_price;
+    addItem({
+      product_id: product.id,
+      name: product.name,
+      price: finalPrice,
+      variation,
+      image_url: product.image_url || undefined,
+    });
+    toast.success(`${product.name} added to cart!`);
+    setSelectedProduct(null);
+    setSelectedVariation("");
+  };
+
+  const openVariationDialog = (product: Product) => {
+    if (product.variations && typeof product.variations === 'object') {
+      setSelectedProduct(product);
+      setSelectedVariation("");
+    } else {
+      handleAddToCart(product);
+    }
   };
 
   if (loading) {
@@ -134,7 +162,11 @@ const Menu = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" disabled={!product.is_available}>
+                    <Button 
+                      className="w-full" 
+                      disabled={!product.is_available}
+                      onClick={() => openVariationDialog(product)}
+                    >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       Add to Cart
                     </Button>
@@ -151,6 +183,31 @@ const Menu = () => {
           </div>
         </Tabs>
       </div>
+
+      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Size for {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-4">
+            {selectedProduct?.variations && typeof selectedProduct.variations === 'object' && 
+              Object.entries(selectedProduct.variations).map(([size, price]) => (
+                <Button
+                  key={size}
+                  variant={selectedVariation === size ? "default" : "outline"}
+                  className="w-full justify-between"
+                  onClick={() => {
+                    handleAddToCart(selectedProduct, size, Number(price));
+                  }}
+                >
+                  <span>{size}</span>
+                  <span>{formatPrice(Number(price))}</span>
+                </Button>
+              ))
+            }
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <footer className="bg-card border-t border-border py-8 mt-12">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
