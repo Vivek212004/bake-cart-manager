@@ -213,8 +213,8 @@ const Menu = () => {
                   <Input
                     id="weight"
                     type="number"
-                    min="0.1"
-                    step="0.1"
+                    min="0.6"
+                    step="0.6"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     placeholder="Enter weight in kg"
