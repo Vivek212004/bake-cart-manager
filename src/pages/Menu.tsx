@@ -9,6 +9,8 @@ import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Category {
   id: string;
@@ -25,6 +27,7 @@ interface Product {
   is_available: boolean;
   variations: any;
   category_id: string;
+  is_sold_by_weight: boolean;
 }
 
 const Menu = () => {
@@ -35,6 +38,7 @@ const Menu = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<string>("");
+  const [weight, setWeight] = useState<string>("1");
 
   useEffect(() => {
     fetchData();
@@ -73,24 +77,27 @@ const Menu = () => {
     return `₹${price.toFixed(0)}`;
   };
 
-  const handleAddToCart = (product: Product, variation?: string, price?: number) => {
+  const handleAddToCart = (product: Product, variation?: string, price?: number, weightInKg?: number) => {
     const finalPrice = price || product.base_price;
+    const variationText = weightInKg ? `${weightInKg} kg` : variation;
     addItem({
       product_id: product.id,
       name: product.name,
       price: finalPrice,
-      variation,
+      variation: variationText,
       image_url: product.image_url || undefined,
     });
     toast.success(`${product.name} added to cart!`);
     setSelectedProduct(null);
     setSelectedVariation("");
+    setWeight("1");
   };
 
   const openVariationDialog = (product: Product) => {
-    if (product.variations && typeof product.variations === 'object') {
+    if (product.is_sold_by_weight || (product.variations && typeof product.variations === 'object')) {
       setSelectedProduct(product);
       setSelectedVariation("");
+      setWeight("1");
     } else {
       handleAddToCart(product);
     }
@@ -146,7 +153,11 @@ const Menu = () => {
                   </CardHeader>
                   <CardContent className="pb-3">
                     <div className="space-y-2">
-                      {product.variations && typeof product.variations === 'object' ? (
+                      {product.is_sold_by_weight ? (
+                        <div>
+                          <p className="text-2xl font-bold text-primary">{formatPrice(product.base_price)}/kg</p>
+                        </div>
+                      ) : product.variations && typeof product.variations === 'object' ? (
                         <div className="text-sm">
                           <p className="font-semibold mb-1 text-muted-foreground">Available sizes:</p>
                           {Object.entries(product.variations).map(([size, price]) => (
@@ -187,10 +198,55 @@ const Menu = () => {
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Select Size for {selectedProduct?.name}</DialogTitle>
+            <DialogTitle>
+              {selectedProduct?.is_sold_by_weight 
+                ? `Enter Weight for ${selectedProduct?.name}`
+                : `Select Size for ${selectedProduct?.name}`
+              }
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 pt-4">
-            {selectedProduct?.variations && typeof selectedProduct.variations === 'object' && 
+          <div className="space-y-4 pt-4">
+            {selectedProduct?.is_sold_by_weight ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="weight">Weight (kg)</Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="Enter weight in kg"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
+                  <span className="text-sm text-muted-foreground">Total Price:</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {formatPrice((selectedProduct?.base_price || 0) * parseFloat(weight || "0"))}
+                  </span>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const weightNum = parseFloat(weight);
+                    if (weightNum > 0) {
+                      handleAddToCart(
+                        selectedProduct,
+                        undefined,
+                        selectedProduct.base_price * weightNum,
+                        weightNum
+                      );
+                    } else {
+                      toast.error("Please enter a valid weight");
+                    }
+                  }}
+                >
+                  Add to Cart
+                </Button>
+              </>
+            ) : (
+              selectedProduct?.variations && typeof selectedProduct.variations === 'object' && 
               Object.entries(selectedProduct.variations).map(([size, price]) => (
                 <Button
                   key={size}
@@ -204,7 +260,7 @@ const Menu = () => {
                   <span>{formatPrice(Number(price))}</span>
                 </Button>
               ))
-            }
+            )}
           </div>
         </DialogContent>
       </Dialog>

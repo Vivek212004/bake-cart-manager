@@ -137,6 +137,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_available: boolean | null
+          is_sold_by_weight: boolean | null
           name: string
           updated_at: string | null
           variations: Json | null
@@ -149,6 +150,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean | null
+          is_sold_by_weight?: boolean | null
           name: string
           updated_at?: string | null
           variations?: Json | null
@@ -161,6 +163,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean | null
+          is_sold_by_weight?: boolean | null
           name?: string
           updated_at?: string | null
           variations?: Json | null

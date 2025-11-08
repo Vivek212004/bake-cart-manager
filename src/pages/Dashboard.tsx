@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const Dashboard = () => {
     description: "",
     base_price: "",
     category_id: "",
+    is_sold_by_weight: false,
   });
 
   useEffect(() => {
@@ -147,6 +149,7 @@ const Dashboard = () => {
         base_price: parseFloat(newProduct.base_price),
         category_id: newProduct.category_id,
         is_available: true,
+        is_sold_by_weight: newProduct.is_sold_by_weight,
       }]);
 
     if (error) {
@@ -155,7 +158,7 @@ const Dashboard = () => {
     }
 
     toast.success("Product added successfully");
-    setNewProduct({ name: "", description: "", base_price: "", category_id: "" });
+    setNewProduct({ name: "", description: "", base_price: "", category_id: "", is_sold_by_weight: false });
     fetchProducts();
   };
 
@@ -264,7 +267,9 @@ const Dashboard = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="price">Base Price (₹)</Label>
+                        <Label htmlFor="price">
+                          {newProduct.is_sold_by_weight ? "Price per kg (₹)" : "Base Price (₹)"}
+                        </Label>
                         <Input
                           id="price"
                           type="number"
@@ -273,6 +278,18 @@ const Dashboard = () => {
                           onChange={(e) => setNewProduct({ ...newProduct, base_price: e.target.value })}
                           required
                         />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="weight"
+                          checked={newProduct.is_sold_by_weight}
+                          onCheckedChange={(checked) => 
+                            setNewProduct({ ...newProduct, is_sold_by_weight: checked as boolean })
+                          }
+                        />
+                        <Label htmlFor="weight" className="cursor-pointer">
+                          Sold by weight (per kg)
+                        </Label>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="category">Category</Label>
@@ -318,7 +335,12 @@ const Dashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-2xl font-bold text-primary">₹{product.base_price}</p>
+                      <p className="text-2xl font-bold text-primary">
+                        ₹{product.base_price}{product.is_sold_by_weight ? "/kg" : ""}
+                      </p>
+                      {product.is_sold_by_weight && (
+                        <Badge variant="secondary" className="mt-2">Sold by weight</Badge>
+                      )}
                       {product.description && (
                         <p className="text-sm text-muted-foreground mt-2">{product.description}</p>
                       )}
