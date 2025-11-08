@@ -35,6 +35,35 @@ const Dashboard = () => {
     checkAdminStatus();
   }, []);
 
+  useEffect(() => {
+    // Set up realtime subscription for orders
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('Order update:', payload);
+          if (payload.eventType === 'UPDATE') {
+            setOrders((prevOrders) =>
+              prevOrders.map((order) =>
+                order.id === payload.new.id ? { ...order, ...payload.new } : order
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const checkAdminStatus = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -138,6 +167,20 @@ const Dashboard = () => {
     fetchProducts();
   };
 
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", orderId);
+
+    if (error) {
+      toast.error("Failed to update order status");
+      return;
+    }
+
+    toast.success("Order status updated");
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -200,7 +243,34 @@ const Dashboard = () => {
                           {new Date(order.created_at).toLocaleDateString()} - {order.customer_name}
                         </CardDescription>
                       </div>
-                      <Badge>{order.status}</Badge>
+                      <div className="flex flex-col gap-2 items-end">
+                        <Badge variant={
+                          order.status === 'delivered' ? 'default' :
+                          order.status === 'ready' ? 'default' :
+                          order.status === 'preparing' ? 'secondary' :
+                          order.status === 'cancelled' ? 'destructive' :
+                          'outline'
+                        }>
+                          {order.status}
+                        </Badge>
+                        {isAdmin && (
+                          <Select
+                            value={order.status}
+                            onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
+                          >
+                            <SelectTrigger className="w-32 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="preparing">Preparing</SelectItem>
+                              <SelectItem value="ready">Ready</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
