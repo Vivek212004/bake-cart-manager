@@ -1,9 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
-import { Cookie, Clock, Award } from "lucide-react";
+import { Cookie, Clock, Award, Cake, Croissant, Pizza, UtensilsCrossed } from "lucide-react";
 import heroImage from "@/assets/hero-bakery.jpg";
 import { Footer } from "@/components/Footer";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Home = () => {
   return (
@@ -37,6 +45,86 @@ const Home = () => {
               </Button>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Featured Products Carousel */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-12 text-foreground">
+            Our Specialties
+          </h2>
+          <Carousel className="w-full max-w-5xl mx-auto">
+            <CarouselContent>
+              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
+                <Card className="border-border">
+                  <CardContent className="flex flex-col items-center justify-center p-8">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Cake className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Custom Cakes</h3>
+                    <p className="text-muted-foreground text-center">
+                      Handcrafted celebration cakes for every occasion
+                    </p>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
+                <Card className="border-border">
+                  <CardContent className="flex flex-col items-center justify-center p-8">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Croissant className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Fresh Pastries</h3>
+                    <p className="text-muted-foreground text-center">
+                      Buttery, flaky pastries baked fresh daily
+                    </p>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
+                <Card className="border-border">
+                  <CardContent className="flex flex-col items-center justify-center p-8">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Pizza className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Artisan Pizza</h3>
+                    <p className="text-muted-foreground text-center">
+                      Wood-fired pizzas with premium toppings
+                    </p>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
+                <Card className="border-border">
+                  <CardContent className="flex flex-col items-center justify-center p-8">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Cookie className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Gourmet Cookies</h3>
+                    <p className="text-muted-foreground text-center">
+                      Crispy, chewy cookies in delightful flavors
+                    </p>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
+                <Card className="border-border">
+                  <CardContent className="flex flex-col items-center justify-center p-8">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <UtensilsCrossed className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-foreground">Fresh Breads</h3>
+                    <p className="text-muted-foreground text-center">
+                      Traditional and specialty breads baked daily
+                    </p>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
         </div>
       </section>
 

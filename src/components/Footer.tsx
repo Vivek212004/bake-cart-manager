@@ -116,7 +116,7 @@ export const Footer = () => {
 
         <div className="mt-8 pt-8 border-t border-border text-center">
           <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} Golden Crust Bakery. All rights reserved.
+            &copy; {new Date().getFullYear()} Emoticon Bakery. All rights reserved.
           </p>
         </div>
       </div>

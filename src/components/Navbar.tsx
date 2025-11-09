@@ -33,7 +33,7 @@ export const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
-          Golden Crust Bakery
+          Emoticon Bakery
         </Link>
         
         <div className="flex items-center gap-6">
