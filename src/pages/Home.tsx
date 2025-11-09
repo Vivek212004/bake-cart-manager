@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Cookie, Clock, Award } from "lucide-react";
 import heroImage from "@/assets/hero-bakery.jpg";
+import { Footer } from "@/components/Footer";
 
 const Home = () => {
   return (
@@ -90,11 +91,7 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border py-8">
-        <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2024 Golden Crust Bakery. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

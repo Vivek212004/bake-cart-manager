@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Footer } from "@/components/Footer";
 
 interface Category {
   id: string;
@@ -266,11 +267,13 @@ const Menu = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {selectedProduct?.is_sold_by_weight ? `Enter Weight for ${selectedProduct?.name}` : `Select Size for ${selectedProduct?.name}`}
+              {selectedProduct?.is_sold_by_weight && (!selectedProduct?.variations || Object.keys(selectedProduct.variations).length === 0)
+                ? `Enter Weight for ${selectedProduct?.name}`
+                : `Select Option for ${selectedProduct?.name}`}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {selectedProduct?.is_sold_by_weight ? (
+            {selectedProduct?.is_sold_by_weight && (!selectedProduct?.variations || Object.keys(selectedProduct.variations).length === 0) ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="weight">Weight (kg)</Label>
@@ -330,11 +333,7 @@ const Menu = () => {
         </DialogContent>
       </Dialog>
 
-      <footer className="bg-card border-t border-border py-8 mt-12">
-        <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2024 Golden Crust Bakery. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
