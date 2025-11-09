@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
-import { Cookie, Clock, Award, Cake, Croissant, Pizza, UtensilsCrossed } from "lucide-react";
+import { Cookie, Clock, Award } from "lucide-react";
 import heroImage from "@/assets/hero-bakery.jpg";
+import carouselCake from "@/assets/carousel-cake.jpg";
+import carouselPastries from "@/assets/carousel-pastries.jpg";
+import carouselPizza from "@/assets/carousel-pizza.jpg";
+import carouselCookies from "@/assets/carousel-cookies.jpg";
+import carouselBreads from "@/assets/carousel-breads.jpg";
 import { Footer } from "@/components/Footer";
 import {
   Carousel,
@@ -11,7 +16,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Card, CardContent } from "@/components/ui/card";
+import Autoplay from "embla-carousel-autoplay";
 
 const Home = () => {
   return (
@@ -54,76 +59,106 @@ const Home = () => {
           <h2 className="text-4xl font-bold text-center mb-12 text-foreground">
             Our Specialties
           </h2>
-          <Carousel className="w-full max-w-5xl mx-auto">
+          <Carousel 
+            className="w-full max-w-6xl mx-auto"
+            plugins={[
+              Autoplay({
+                delay: 3000,
+              }),
+            ]}
+            opts={{
+              loop: true,
+            }}
+          >
             <CarouselContent>
-              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
-                <Card className="border-border">
-                  <CardContent className="flex flex-col items-center justify-center p-8">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <Cake className="w-10 h-10 text-primary" />
+              <CarouselItem>
+                <div className="relative h-[400px] rounded-xl overflow-hidden">
+                  <img 
+                    src={carouselCake} 
+                    alt="Custom Cakes" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end">
+                    <div className="p-8">
+                      <h3 className="text-3xl font-bold text-foreground mb-2">Custom Cakes</h3>
+                      <p className="text-lg text-muted-foreground">
+                        Handcrafted celebration cakes for every occasion
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">Custom Cakes</h3>
-                    <p className="text-muted-foreground text-center">
-                      Handcrafted celebration cakes for every occasion
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </CarouselItem>
-              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
-                <Card className="border-border">
-                  <CardContent className="flex flex-col items-center justify-center p-8">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <Croissant className="w-10 h-10 text-primary" />
+              <CarouselItem>
+                <div className="relative h-[400px] rounded-xl overflow-hidden">
+                  <img 
+                    src={carouselPastries} 
+                    alt="Fresh Pastries" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end">
+                    <div className="p-8">
+                      <h3 className="text-3xl font-bold text-foreground mb-2">Fresh Pastries</h3>
+                      <p className="text-lg text-muted-foreground">
+                        Buttery, flaky pastries baked fresh daily
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">Fresh Pastries</h3>
-                    <p className="text-muted-foreground text-center">
-                      Buttery, flaky pastries baked fresh daily
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </CarouselItem>
-              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
-                <Card className="border-border">
-                  <CardContent className="flex flex-col items-center justify-center p-8">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <Pizza className="w-10 h-10 text-primary" />
+              <CarouselItem>
+                <div className="relative h-[400px] rounded-xl overflow-hidden">
+                  <img 
+                    src={carouselPizza} 
+                    alt="Artisan Pizza" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end">
+                    <div className="p-8">
+                      <h3 className="text-3xl font-bold text-foreground mb-2">Artisan Pizza</h3>
+                      <p className="text-lg text-muted-foreground">
+                        Wood-fired pizzas with premium toppings
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">Artisan Pizza</h3>
-                    <p className="text-muted-foreground text-center">
-                      Wood-fired pizzas with premium toppings
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </CarouselItem>
-              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
-                <Card className="border-border">
-                  <CardContent className="flex flex-col items-center justify-center p-8">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <Cookie className="w-10 h-10 text-primary" />
+              <CarouselItem>
+                <div className="relative h-[400px] rounded-xl overflow-hidden">
+                  <img 
+                    src={carouselCookies} 
+                    alt="Gourmet Cookies" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end">
+                    <div className="p-8">
+                      <h3 className="text-3xl font-bold text-foreground mb-2">Gourmet Cookies</h3>
+                      <p className="text-lg text-muted-foreground">
+                        Crispy, chewy cookies in delightful flavors
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">Gourmet Cookies</h3>
-                    <p className="text-muted-foreground text-center">
-                      Crispy, chewy cookies in delightful flavors
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </CarouselItem>
-              <CarouselItem className="md:basis-1/2 lg:basis-1/3">
-                <Card className="border-border">
-                  <CardContent className="flex flex-col items-center justify-center p-8">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <UtensilsCrossed className="w-10 h-10 text-primary" />
+              <CarouselItem>
+                <div className="relative h-[400px] rounded-xl overflow-hidden">
+                  <img 
+                    src={carouselBreads} 
+                    alt="Fresh Breads" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end">
+                    <div className="p-8">
+                      <h3 className="text-3xl font-bold text-foreground mb-2">Fresh Breads</h3>
+                      <p className="text-lg text-muted-foreground">
+                        Traditional and specialty breads baked daily
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">Fresh Breads</h3>
-                    <p className="text-muted-foreground text-center">
-                      Traditional and specialty breads baked daily
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </CarouselItem>
             </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
+            <CarouselPrevious className="left-4" />
+            <CarouselNext className="right-4" />
           </Carousel>
         </div>
       </section>
