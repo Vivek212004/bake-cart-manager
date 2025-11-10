@@ -8,6 +8,7 @@ interface CartItem {
   quantity: number;
   variation?: string;
   image_url?: string;
+  weight?: number;
 }
 
 interface CartContextType {
@@ -35,7 +36,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = (item: Omit<CartItem, "id" | "quantity">) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
-        (i) => i.product_id === item.product_id && i.variation === item.variation
+        (i) => i.product_id === item.product_id && i.variation === item.variation && i.weight === item.weight
       );
 
       if (existingIndex >= 0) {
