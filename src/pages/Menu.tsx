@@ -18,6 +18,8 @@ import { useCart } from "@/contexts/CartContext";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -56,6 +58,7 @@ const Menu = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<string>("");
+  const [selectedWeightOption, setSelectedWeightOption] = useState<string>("");
   const [weight, setWeight] = useState<string>("1");
   const [useCustomWeight, setUseCustomWeight] = useState<boolean>(false);
 
@@ -152,6 +155,7 @@ const Menu = () => {
   const openVariationDialog = (product: Product) => {
     setSelectedProduct(product);
     setSelectedVariation("");
+    setSelectedWeightOption("");
     setWeight("1");
     setUseCustomWeight(false);
   };
@@ -267,76 +271,137 @@ const Menu = () => {
             {selectedProduct?.variations && Array.isArray(selectedProduct.variations) && selectedProduct.variations.length > 0 && (
               <div className="space-y-3">
                 <Label className="text-base font-semibold">Select Type</Label>
-                <RadioGroup value={selectedVariation} onValueChange={setSelectedVariation}>
-                  {selectedProduct.variations.map((variation: any) => (
-                    <div key={variation.name} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value={variation.name} id={variation.name} />
-                        <Label htmlFor={variation.name} className="cursor-pointer font-normal">
-                          {variation.name}
-                        </Label>
+                <RadioGroup 
+                  value={selectedVariation} 
+                  onValueChange={(value) => {
+                    setSelectedVariation(value);
+                    setSelectedWeightOption(""); // Reset weight selection when changing type
+                  }}
+                >
+                  {selectedProduct.variations.map((variation: any) => {
+                    const hasNestedVariations = variation.variations && Array.isArray(variation.variations);
+                    const displayPrice = hasNestedVariations 
+                      ? variation.variations[0]?.price 
+                      : variation.price;
+                    
+                    return (
+                      <div key={variation.name} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value={variation.name} id={variation.name} />
+                          <Label htmlFor={variation.name} className="cursor-pointer font-normal">
+                            {variation.name}
+                          </Label>
+                        </div>
+                        {displayPrice && (
+                          <span className="font-semibold text-primary">
+                            {hasNestedVariations ? 'from ' : ''}{formatPrice(Number(displayPrice))}
+                          </span>
+                        )}
                       </div>
-                      <span className="font-semibold text-primary">
-                        {formatPrice(Number(variation.price))}
-                        {selectedProduct.is_sold_by_weight && <span className="text-sm text-muted-foreground">/kg</span>}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </RadioGroup>
               </div>
             )}
 
-            {/* Weight Customization (if enabled) */}
-            {selectedProduct?.is_sold_by_weight && (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="customize-weight"
-                    checked={useCustomWeight}
-                    onCheckedChange={(checked) => {
-                      setUseCustomWeight(checked as boolean);
-                      if (!checked) setWeight("1");
-                    }}
-                  />
-                  <Label htmlFor="customize-weight" className="cursor-pointer">
-                    Customize Weight
-                  </Label>
-                </div>
-
-                {useCustomWeight && (
-                  <div className="space-y-2 pl-6">
-                    <Label htmlFor="weight">Weight (kg)</Label>
-                    <Input
-                      id="weight"
-                      type="number"
-                      min="0.5"
-                      step="0.5"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      placeholder="Enter weight in kg"
-                    />
+            {/* Weight Options (if nested variations exist) */}
+            {selectedVariation && selectedProduct?.variations && (() => {
+              const selectedVar = selectedProduct.variations.find((v: any) => v.name === selectedVariation);
+              const hasNestedVariations = selectedVar?.variations && Array.isArray(selectedVar.variations);
+              
+              if (hasNestedVariations) {
+                return (
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Select Weight</Label>
+                    <RadioGroup value={selectedWeightOption} onValueChange={setSelectedWeightOption}>
+                      {selectedVar.variations.map((weightVar: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
+                          <div className="flex items-center space-x-3">
+                            <RadioGroupItem value={`${weightVar.weight}`} id={`weight-${idx}`} />
+                            <Label htmlFor={`weight-${idx}`} className="cursor-pointer font-normal">
+                              {weightVar.weight}
+                            </Label>
+                          </div>
+                          <span className="font-semibold text-primary">
+                            {formatPrice(Number(weightVar.price))}
+                          </span>
+                        </div>
+                      ))}
+                    </RadioGroup>
                   </div>
-                )}
-              </div>
-            )}
+                );
+              }
+              return null;
+            })()}
+
+            {/* Custom Weight Option (for products sold by weight without nested variations) */}
+            {selectedProduct?.is_sold_by_weight && selectedVariation && (() => {
+              const selectedVar = selectedProduct.variations?.find((v: any) => v.name === selectedVariation);
+              const hasNestedVariations = selectedVar?.variations && Array.isArray(selectedVar.variations);
+              
+              if (!hasNestedVariations) {
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="customize-weight"
+                        checked={useCustomWeight}
+                        onCheckedChange={(checked) => {
+                          setUseCustomWeight(checked as boolean);
+                          if (!checked) setWeight("1");
+                        }}
+                      />
+                      <Label htmlFor="customize-weight" className="cursor-pointer">
+                        Customize Weight
+                      </Label>
+                    </div>
+
+                    {useCustomWeight && (
+                      <div className="space-y-2 pl-6">
+                        <Label htmlFor="weight">Weight (kg)</Label>
+                        <Input
+                          id="weight"
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={weight}
+                          onChange={(e) => setWeight(e.target.value)}
+                          placeholder="Enter weight in kg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Price Display */}
             <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
               <span className="text-sm text-muted-foreground">Total Price:</span>
               <span className="text-2xl font-bold text-primary">
                 {(() => {
-                  const weightNum = useCustomWeight ? parseFloat(weight || "1") : 1;
-                  let basePrice = selectedProduct?.base_price || 0;
+                  if (!selectedVariation) return formatPrice(selectedProduct?.base_price || 0);
                   
-                  // If variation is selected and variations is an array, find the price
-                  if (selectedVariation && selectedProduct?.variations && Array.isArray(selectedProduct.variations)) {
-                    const variation = selectedProduct.variations.find((v: any) => v.name === selectedVariation);
-                    if (variation) {
-                      basePrice = Number(variation.price);
-                    }
+                  const selectedVar = selectedProduct?.variations?.find((v: any) => v.name === selectedVariation);
+                  if (!selectedVar) return formatPrice(selectedProduct?.base_price || 0);
+
+                  const hasNestedVariations = selectedVar.variations && Array.isArray(selectedVar.variations);
+                  
+                  // If has nested weight variations, use the selected weight option price
+                  if (hasNestedVariations && selectedWeightOption) {
+                    const weightVar = selectedVar.variations.find((w: any) => w.weight === selectedWeightOption);
+                    return weightVar ? formatPrice(Number(weightVar.price)) : formatPrice(selectedProduct?.base_price || 0);
                   }
                   
-                  return formatPrice(basePrice * weightNum);
+                  // Otherwise, use the variation price multiplied by custom weight
+                  if (!hasNestedVariations) {
+                    const basePrice = Number(selectedVar.price) || selectedProduct?.base_price || 0;
+                    const weightNum = useCustomWeight ? parseFloat(weight || "1") : 1;
+                    return formatPrice(basePrice * weightNum);
+                  }
+                  
+                  return formatPrice(Number(selectedVar.price) || selectedProduct?.base_price || 0);
                 })()}
               </span>
             </div>
@@ -346,35 +411,61 @@ const Menu = () => {
               className="w-full"
               onClick={() => {
                 // Validation
-                if (selectedProduct?.variations && Array.isArray(selectedProduct.variations) && selectedProduct.variations.length > 0 && !selectedVariation) {
+                if (!selectedVariation) {
                   toast.error("Please select a type (Egg/Eggless)");
                   return;
                 }
 
-                const weightNum = useCustomWeight ? parseFloat(weight) : 1;
-                if (useCustomWeight && weightNum <= 0) {
+                const selectedVar = selectedProduct?.variations?.find((v: any) => v.name === selectedVariation);
+                const hasNestedVariations = selectedVar?.variations && Array.isArray(selectedVar.variations);
+
+                // If has nested variations, must select a weight option
+                if (hasNestedVariations && !selectedWeightOption) {
+                  toast.error("Please select a weight option");
+                  return;
+                }
+
+                // If custom weight is enabled, validate it
+                const weightNum = parseFloat(weight);
+                if (!hasNestedVariations && useCustomWeight && weightNum <= 0) {
                   toast.error("Please enter a valid weight");
                   return;
                 }
 
-                let basePrice = selectedProduct?.base_price || 0;
-                
-                // Get the price based on selected variation
-                if (selectedVariation && selectedProduct?.variations && Array.isArray(selectedProduct.variations)) {
-                  const variation = selectedProduct.variations.find((v: any) => v.name === selectedVariation);
-                  if (variation) {
-                    basePrice = Number(variation.price);
+                let finalPrice = selectedProduct?.base_price || 0;
+                let variationDetails = selectedVariation;
+                let finalWeight = undefined;
+
+                // Calculate price based on selection type
+                if (hasNestedVariations && selectedWeightOption) {
+                  const weightVar = selectedVar.variations.find((w: any) => w.weight === selectedWeightOption);
+                  if (weightVar) {
+                    finalPrice = Number(weightVar.price);
+                    variationDetails = `${selectedVariation} - ${selectedWeightOption}`;
+                  }
+                } else if (!hasNestedVariations) {
+                  const basePrice = Number(selectedVar?.price) || selectedProduct?.base_price || 0;
+                  if (useCustomWeight) {
+                    finalWeight = weightNum;
+                    finalPrice = basePrice * weightNum;
+                  } else {
+                    finalPrice = basePrice;
                   }
                 }
 
-                const finalPrice = basePrice * weightNum;
-
                 handleAddToCart(
                   selectedProduct!,
-                  selectedVariation || undefined,
+                  variationDetails,
                   finalPrice,
-                  useCustomWeight ? weightNum : undefined
+                  finalWeight
                 );
+                
+                // Reset dialog state
+                setSelectedProduct(null);
+                setSelectedVariation("");
+                setSelectedWeightOption("");
+                setUseCustomWeight(false);
+                setWeight("1");
               }}
             >
               Add to Cart
