@@ -18,6 +18,8 @@ import { useCart } from "@/contexts/CartContext";
 import { Input } from "@/components/ui/input";
 import { Footer } from "@/components/Footer";
 import { ProductCustomizationDialog } from "@/components/menu/ProductCustomizationDialog";
+import { StarRating } from "@/components/reviews/StarRating";
+import { Star } from "lucide-react";
 
 interface Category {
   id: string;
@@ -30,12 +32,14 @@ interface Product {
   name: string;
   description: string | null;
   base_price: number;
-  image_url: string | null; // original DB value
-  image_url_resolved?: string | null; // resolved public URL (computed)
+  image_url: string | null;
+  image_url_resolved?: string | null;
   is_available: boolean;
   variations: any;
   category_id: string;
   is_sold_by_weight: boolean;
+  average_rating?: number;
+  review_count?: number;
 }
 
 const PLACEHOLDER = "/placeholder.png"; // provide this file in public/ or change path
@@ -66,17 +70,26 @@ const Menu = () => {
 
       const { data: productsData, error: productsError } = await supabase
         .from("products")
-        .select("*")
+        .select(`
+          *,
+          product_ratings (
+            average_rating,
+            review_count
+          )
+        `)
         .eq("is_available", true);
 
       if (productsError) throw productsError;
 
-      // Resolve image URLs:
+      // Resolve image URLs and ratings:
       const parsed = (productsData || []).map((p: any) => {
+        const ratings = Array.isArray(p.product_ratings) ? p.product_ratings[0] : p.product_ratings;
         const prod: Product = {
           ...p,
           image_url: p.image_url ? String(p.image_url).trim().replace(/^["']|["']$/g, "") : null,
           image_url_resolved: null,
+          average_rating: ratings?.average_rating ? Number(ratings.average_rating) : undefined,
+          review_count: ratings?.review_count || undefined,
         };
 
         // If the DB already has a full http(s) URL, use it directly
@@ -274,6 +287,14 @@ const Menu = () => {
                     {product.description && (
                       <CardDescription className="text-sm">{product.description}</CardDescription>
                     )}
+                    {product.average_rating && product.review_count ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <StarRating rating={product.average_rating} size={16} />
+                        <span className="text-sm text-muted-foreground">
+                          {product.average_rating} ({product.review_count} {product.review_count === 1 ? 'review' : 'reviews'})
+                        </span>
+                      </div>
+                    ) : null}
                   </CardHeader>
 
                   <CardContent className="pb-3">

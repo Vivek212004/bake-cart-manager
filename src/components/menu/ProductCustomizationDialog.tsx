@@ -5,7 +5,10 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { ReviewsList } from "@/components/reviews/ReviewsList";
+import { ReviewForm } from "@/components/reviews/ReviewForm";
 
 interface Product {
   id: string;
@@ -42,6 +45,7 @@ export const ProductCustomizationDialog = ({
   const [selectedWeightOption, setSelectedWeightOption] = useState<string>("");
   const [customWeight, setCustomWeight] = useState<string>("1");
   const [useCustomWeight, setUseCustomWeight] = useState<boolean>(false);
+  const [reviewsKey, setReviewsKey] = useState(0);
 
   const resetDialog = () => {
     setSelectedVariation("");
@@ -133,12 +137,18 @@ export const ProductCustomizationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Customize {product.name}</DialogTitle>
+          <DialogTitle>{product.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 pt-4">
+        <Tabs defaultValue="customize" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="customize">Customize Order</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="customize" className="space-y-6 pt-4">
           {/* Step 1: Egg/Eggless Selection */}
           {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
             <div className="space-y-3">
@@ -260,11 +270,30 @@ export const ProductCustomizationDialog = ({
             </span>
           </div>
 
-          {/* Add to Cart Button */}
-          <Button className="w-full" size="lg" onClick={handleAddToCart}>
-            Add to Cart
-          </Button>
-        </div>
+            {/* Add to Cart Button */}
+            <Button className="w-full" size="lg" onClick={handleAddToCart}>
+              Add to Cart
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="reviews" className="space-y-6 pt-4">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Write a Review</h3>
+                <ReviewForm
+                  productId={product.id}
+                  productName={product.name}
+                  onReviewSubmitted={() => setReviewsKey((prev) => prev + 1)}
+                />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
+                <ReviewsList key={reviewsKey} productId={product.id} />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
