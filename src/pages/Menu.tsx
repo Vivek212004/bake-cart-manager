@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import {
@@ -61,6 +61,8 @@ const Menu = () => {
   const [selectedWeightOption, setSelectedWeightOption] = useState<string>("");
   const [weight, setWeight] = useState<string>("1");
   const [useCustomWeight, setUseCustomWeight] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [eggFilter, setEggFilter] = useState<string>("all"); // "all", "egg", "eggless"
 
   useEffect(() => {
     fetchData();
@@ -120,10 +122,30 @@ const Menu = () => {
     }
   };
 
-  const filteredProducts = useMemo(
-    () => (selectedCategory === "all" ? products : products.filter((p) => p.category_id === selectedCategory)),
-    [products, selectedCategory]
-  );
+  const filteredProducts = useMemo(() => {
+    let filtered = selectedCategory === "all" ? products : products.filter((p) => p.category_id === selectedCategory);
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((p) => 
+        p.name.toLowerCase().includes(query) || 
+        p.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply egg/eggless filter
+    if (eggFilter !== "all") {
+      filtered = filtered.filter((p) => {
+        if (!p.variations || !Array.isArray(p.variations)) return true;
+        return p.variations.some((v: any) => 
+          v.name.toLowerCase() === eggFilter.toLowerCase()
+        );
+      });
+    }
+    
+    return filtered;
+  }, [products, selectedCategory, searchQuery, eggFilter]);
 
   const formatPrice = (price: number) => {
     return `₹${price.toFixed(0)}`;
@@ -192,6 +214,57 @@ const Menu = () => {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Search and Filters */}
+          <div className="mt-6 space-y-4">
+            {/* Search Bar */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Egg/Eggless Filter */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Filter by:</span>
+              <div className="flex gap-2">
+                <Badge
+                  variant={eggFilter === "all" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setEggFilter("all")}
+                >
+                  All
+                </Badge>
+                <Badge
+                  variant={eggFilter === "egg" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setEggFilter("egg")}
+                >
+                  Egg
+                </Badge>
+                <Badge
+                  variant={eggFilter === "eggless" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setEggFilter("eggless")}
+                >
+                  Eggless
+                </Badge>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-8">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
