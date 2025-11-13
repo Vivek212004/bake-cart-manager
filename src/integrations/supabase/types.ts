@@ -128,6 +128,44 @@ export type Database = {
         }
         Relationships: []
       }
+      product_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          rating: number
+          review_text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          rating: number
+          review_text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          rating?: number
+          review_text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_product_reviews_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           base_price: number
@@ -228,7 +266,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      product_ratings: {
+        Row: {
+          average_rating: number | null
+          product_id: string | null
+          review_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_product_reviews_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
