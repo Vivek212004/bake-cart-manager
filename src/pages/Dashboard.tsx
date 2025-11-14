@@ -29,6 +29,10 @@ const Dashboard = () => {
     base_price: "",
     category_id: "",
     is_sold_by_weight: false,
+    variations: [
+      { name: "Egg", price: "" },
+      { name: "Eggless", price: "" }
+    ]
   });
 
   useEffect(() => {
@@ -184,15 +188,29 @@ const Dashboard = () => {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate variations
+    const validVariations = newProduct.variations.filter(v => v.price && parseFloat(v.price) > 0);
+    
+    if (validVariations.length === 0) {
+      toast.error("Please add at least one variation with a valid price");
+      return;
+    }
+
+    const variationsData = validVariations.map(v => ({
+      name: v.name,
+      price: parseFloat(v.price)
+    }));
+
     const { error } = await supabase
       .from("products")
       .insert([{
         name: newProduct.name,
         description: newProduct.description,
-        base_price: parseFloat(newProduct.base_price),
+        base_price: parseFloat(validVariations[0].price), // Use first variation as base price
         category_id: newProduct.category_id,
         is_available: true,
         is_sold_by_weight: newProduct.is_sold_by_weight,
+        variations: variationsData,
       }]);
 
     if (error) {
@@ -201,7 +219,17 @@ const Dashboard = () => {
     }
 
     toast.success("Product added successfully");
-    setNewProduct({ name: "", description: "", base_price: "", category_id: "", is_sold_by_weight: false });
+    setNewProduct({ 
+      name: "", 
+      description: "", 
+      base_price: "", 
+      category_id: "", 
+      is_sold_by_weight: false,
+      variations: [
+        { name: "Egg", price: "" },
+        { name: "Eggless", price: "" }
+      ]
+    });
     fetchProducts();
   };
 
@@ -336,18 +364,31 @@ const Dashboard = () => {
                           onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="price">
-                          {newProduct.is_sold_by_weight ? "Price per kg (₹)" : "Base Price (₹)"}
+                      <div className="space-y-3">
+                        <Label className="text-base font-semibold">
+                          Product Variations & Prices {newProduct.is_sold_by_weight && "(per kg)"}
                         </Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          step="0.01"
-                          value={newProduct.base_price}
-                          onChange={(e) => setNewProduct({ ...newProduct, base_price: e.target.value })}
-                          required
-                        />
+                        <p className="text-sm text-muted-foreground">
+                          Add prices for Egg and/or Eggless variations
+                        </p>
+                        <div className="grid gap-3">
+                          {newProduct.variations.map((variation, index) => (
+                            <div key={variation.name} className="flex items-center gap-3">
+                              <Label className="w-20 text-sm">{variation.name}</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder={`Price ${newProduct.is_sold_by_weight ? 'per kg' : ''} (₹)`}
+                                value={variation.price}
+                                onChange={(e) => {
+                                  const newVariations = [...newProduct.variations];
+                                  newVariations[index].price = e.target.value;
+                                  setNewProduct({ ...newProduct, variations: newVariations });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
