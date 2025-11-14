@@ -10,6 +10,7 @@ interface Review {
   id: string;
   rating: number;
   review_text: string | null;
+  photo_url: string | null;
   created_at: string;
   profiles: {
     full_name: string | null;
@@ -32,7 +33,7 @@ export const ReviewsList = ({ productId }: ReviewsListProps) => {
     try {
       const { data, error } = await supabase
         .from("product_reviews")
-        .select("id, rating, review_text, created_at, user_id")
+        .select("id, rating, review_text, photo_url, created_at, user_id")
         .eq("product_id", productId)
         .order("created_at", { ascending: false });
 
@@ -107,11 +108,18 @@ export const ReviewsList = ({ productId }: ReviewsListProps) => {
               <StarRating rating={review.rating} size={16} />
             </div>
           </CardHeader>
-          {review.review_text && (
-            <CardContent className="pt-0">
+          <CardContent className="pt-0 space-y-3">
+            {review.photo_url && (
+              <img 
+                src={review.photo_url} 
+                alt="Review" 
+                className="w-full max-w-xs rounded-md object-cover"
+              />
+            )}
+            {review.review_text && (
               <p className="text-sm text-foreground">{review.review_text}</p>
-            </CardContent>
-          )}
+            )}
+          </CardContent>
         </Card>
       ))}
     </div>

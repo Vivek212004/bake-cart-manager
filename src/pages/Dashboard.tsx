@@ -29,10 +29,7 @@ const Dashboard = () => {
     base_price: "",
     category_id: "",
     is_sold_by_weight: false,
-    variations: [
-      { name: "Egg", price: "" },
-      { name: "Eggless", price: "" }
-    ]
+    egg_type: "both" as "egg" | "eggless" | "both",
   });
 
   useEffect(() => {
@@ -187,30 +184,17 @@ const Dashboard = () => {
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate variations
-    const validVariations = newProduct.variations.filter(v => v.price && parseFloat(v.price) > 0);
-    
-    if (validVariations.length === 0) {
-      toast.error("Please add at least one variation with a valid price");
-      return;
-    }
-
-    const variationsData = validVariations.map(v => ({
-      name: v.name,
-      price: parseFloat(v.price)
-    }));
 
     const { error } = await supabase
       .from("products")
       .insert([{
         name: newProduct.name,
         description: newProduct.description,
-        base_price: parseFloat(validVariations[0].price), // Use first variation as base price
+        base_price: parseFloat(newProduct.base_price),
         category_id: newProduct.category_id,
         is_available: true,
         is_sold_by_weight: newProduct.is_sold_by_weight,
-        variations: variationsData,
+        egg_type: newProduct.egg_type,
       }]);
 
     if (error) {
@@ -225,10 +209,7 @@ const Dashboard = () => {
       base_price: "", 
       category_id: "", 
       is_sold_by_weight: false,
-      variations: [
-        { name: "Egg", price: "" },
-        { name: "Eggless", price: "" }
-      ]
+      egg_type: "both",
     });
     fetchProducts();
   };
@@ -364,31 +345,32 @@ const Dashboard = () => {
                           onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-3">
-                        <Label className="text-base font-semibold">
-                          Product Variations & Prices {newProduct.is_sold_by_weight && "(per kg)"}
+                      <div className="space-y-2">
+                        <Label htmlFor="price">
+                          {newProduct.is_sold_by_weight ? "Price per kg (₹)" : "Base Price (₹)"}
                         </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Add prices for Egg and/or Eggless variations
-                        </p>
-                        <div className="grid gap-3">
-                          {newProduct.variations.map((variation, index) => (
-                            <div key={variation.name} className="flex items-center gap-3">
-                              <Label className="w-20 text-sm">{variation.name}</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder={`Price ${newProduct.is_sold_by_weight ? 'per kg' : ''} (₹)`}
-                                value={variation.price}
-                                onChange={(e) => {
-                                  const newVariations = [...newProduct.variations];
-                                  newVariations[index].price = e.target.value;
-                                  setNewProduct({ ...newProduct, variations: newVariations });
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
+                        <Input
+                          id="price"
+                          type="number"
+                          step="0.01"
+                          value={newProduct.base_price}
+                          onChange={(e) => setNewProduct({ ...newProduct, base_price: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="egg_type">Product Type</Label>
+                        <select
+                          id="egg_type"
+                          value={newProduct.egg_type}
+                          onChange={(e) => setNewProduct({ ...newProduct, egg_type: e.target.value as "egg" | "eggless" | "both" })}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          required
+                        >
+                          <option value="both">Both (Egg & Eggless)</option>
+                          <option value="egg">Egg Only</option>
+                          <option value="eggless">Eggless Only</option>
+                        </select>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox

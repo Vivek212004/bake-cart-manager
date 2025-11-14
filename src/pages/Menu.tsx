@@ -136,10 +136,15 @@ const Menu = () => {
     // Apply egg/eggless filter
     if (eggFilter !== "all") {
       filtered = filtered.filter((p) => {
-        if (!p.variations || !Array.isArray(p.variations)) return true;
-        return p.variations.some((v: any) => 
-          v.name.toLowerCase() === eggFilter.toLowerCase()
-        );
+        const eggType = (p as any).egg_type;
+        if (!eggType) return true;
+        
+        if (eggFilter === "eggless") {
+          return eggType === "eggless" || eggType === "both";
+        } else if (eggFilter === "egg") {
+          return eggType === "egg" || eggType === "both";
+        }
+        return true;
       });
     }
     
