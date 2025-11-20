@@ -18,6 +18,24 @@ import {
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+useEffect(() => {
+  async function testDB() {
+    const { data, error } = await supabase.from("products").select("*");
+
+    if (error) {
+      console.error("❌ Supabase NOT connected:", error);
+    } else {
+      console.log("✅ Supabase connected:", data);
+    }
+  }
+
+  testDB();
+}, []);
+
+
 const Home = () => {
   return (
     <div className="min-h-screen bg-background">
