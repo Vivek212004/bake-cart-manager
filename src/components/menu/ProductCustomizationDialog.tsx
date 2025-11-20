@@ -44,7 +44,6 @@ type NormalizedVariation = {
 };
 
 // Normalize all supported variation formats into a uniform array
-//hi
 const getVariationsArray = (product?: Product | null): NormalizedVariation[] => {
   if (!product?.variations) return [];
 
@@ -82,6 +81,18 @@ const getVariationsArray = (product?: Product | null): NormalizedVariation[] => 
   });
 };
 
+// Parse "250g", "500g", "1kg", "1.5kg" -> kg
+const parseWeightToKg = (weight: string | undefined): number | null => {
+  if (!weight) return null;
+  const trimmed = weight.trim().toLowerCase();
+  const match = trimmed.match(/([\d.]+)/);
+  if (!match) return null;
+  const value = parseFloat(match[1]);
+  if (trimmed.includes("kg")) return value;
+  if (trimmed.includes("g")) return value / 1000;
+  return value; // assume kg if no unit
+};
+
 export const ProductCustomizationDialog = ({
   product,
   open,
@@ -116,12 +127,42 @@ export const ProductCustomizationDialog = ({
   const hasNestedVariations =
     selectedVar?.variations && Array.isArray(selectedVar.variations);
 
+  // Helper: get per-kg price based on selected option
+  const getPerKgPrice = (): number | undefined => {
+    if (!product?.is_sold_by_weight || !selectedVar) return undefined;
+
+    if (hasNestedVariations && selectedWeightOption && selectedVar.variations) {
+      const weightVar = selectedVar.variations.find(
+        (w: any) => w.weight === selectedWeightOption
+      );
+      if (!weightVar) return undefined;
+      const wKg = parseWeightToKg(weightVar.weight);
+      if (!wKg) return undefined;
+      return Number(weightVar.price) / wKg;
+    }
+
+    if (!hasNestedVariations && selectedVar.price != null) {
+      // Here price is already per-kg
+      return Number(selectedVar.price);
+    }
+
+    return undefined;
+  };
+
   const calculateTotalPrice = () => {
     if (!product || !selectedVariation || !selectedVar)
       return product?.base_price || 0;
 
-    if (hasNestedVariations && selectedWeightOption) {
-      const weightVar = selectedVar.variations!.find(
+    const perKgPrice = getPerKgPrice();
+
+    if (product.is_sold_by_weight && useCustomWeight && perKgPrice != null) {
+      const weightNum = parseFloat(customWeight || "1");
+      if (isNaN(weightNum) || weightNum <= 0) return product.base_price;
+      return perKgPrice * weightNum;
+    }
+
+    if (hasNestedVariations && selectedWeightOption && selectedVar.variations) {
+      const weightVar = selectedVar.variations.find(
         (w: any) => w.weight === selectedWeightOption
       );
       return weightVar ? Number(weightVar.price) : product.base_price;
@@ -129,8 +170,7 @@ export const ProductCustomizationDialog = ({
 
     if (!hasNestedVariations) {
       const basePrice = Number(selectedVar.price) || product.base_price;
-      const weightNum = useCustomWeight ? parseFloat(customWeight || "1") : 1;
-      return basePrice * weightNum;
+      return basePrice;
     }
 
     return Number(selectedVar.price) || product.base_price;
@@ -149,32 +189,35 @@ export const ProductCustomizationDialog = ({
       return;
     }
 
-    const weightNum = parseFloat(customWeight);
-    if (!hasNestedVariations && useCustomWeight && weightNum <= 0) {
-      toast.error("Please enter a valid weight");
-      return;
-    }
-
     let finalPrice = product.base_price;
     let variationDetails: string | undefined = selectedVariation;
     let finalWeight: number | undefined = undefined;
 
-    if (hasNestedVariations && selectedWeightOption) {
-      const weightVar = selectedVar.variations!.find(
+    const perKgPrice = getPerKgPrice();
+
+    if (product.is_sold_by_weight && useCustomWeight && perKgPrice != null) {
+      const weightNum = parseFloat(customWeight);
+      if (isNaN(weightNum) || weightNum <= 0) {
+        toast.error("Please enter a valid weight");
+        return;
+      }
+      finalWeight = weightNum;
+      finalPrice = perKgPrice * weightNum;
+      variationDetails = hasNestedVariations
+        ? `${selectedVariation} - Custom ${weightNum}kg`
+        : `${selectedVariation} - ${weightNum}kg`;
+    } else if (hasNestedVariations && selectedWeightOption && selectedVar.variations) {
+      const weightVar = selectedVar.variations.find(
         (w: any) => w.weight === selectedWeightOption
       );
       if (weightVar) {
         finalPrice = Number(weightVar.price);
+        finalWeight = parseWeightToKg(weightVar.weight) ?? undefined;
         variationDetails = `${selectedVariation} - ${selectedWeightOption}`;
       }
     } else if (!hasNestedVariations) {
       const basePrice = Number(selectedVar.price) || product.base_price;
-      if (useCustomWeight) {
-        finalWeight = weightNum;
-        finalPrice = basePrice * weightNum;
-      } else {
-        finalPrice = basePrice;
-      }
+      finalPrice = basePrice;
     }
 
     onAddToCart(product, variationDetails, finalPrice, finalWeight);
@@ -183,9 +226,16 @@ export const ProductCustomizationDialog = ({
 
   if (!product) return null;
 
+  const shouldShowCustomWeight =
+    product.is_sold_by_weight &&
+    selectedVariation &&
+    (!hasNestedVariations || (hasNestedVariations && !!selectedWeightOption));
+
+  const perKgPriceForDisplay = getPerKgPrice();
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h=[90vh] overflow-y-auto max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
         </DialogHeader>
@@ -263,7 +313,10 @@ export const ProductCustomizationDialog = ({
                 </Label>
                 <RadioGroup
                   value={selectedWeightOption}
-                  onValueChange={setSelectedWeightOption}
+                  onValueChange={(value) => {
+                    setSelectedWeightOption(value);
+                    // keep custom weight toggle as user set it
+                  }}
                 >
                   {selectedVar.variations!.map((weightVar: any, idx: number) => (
                     <div
@@ -291,11 +344,11 @@ export const ProductCustomizationDialog = ({
               </div>
             )}
 
-            {/* Step 3: Custom weight for per-kg pricing without nested variations */}
-            {selectedVariation && !hasNestedVariations && product.is_sold_by_weight && (
+            {/* Custom weight (for both nested & simple per-kg products) */}
+            {shouldShowCustomWeight && (
               <div className="space-y-3">
                 <Label className="text-base font-semibold">
-                  Step 2: Customize Weight (Optional)
+                  {hasNestedVariations ? "Step 3: Customize Weight (Optional)" : "Step 2: Customize Weight (Optional)"}
                 </Label>
                 <div className="space-y-3 p-4 border rounded-lg bg-accent/5">
                   <div className="flex items-center space-x-2">
@@ -332,12 +385,12 @@ export const ProductCustomizationDialog = ({
                         onChange={(e) => setCustomWeight(e.target.value)}
                         placeholder="Enter weight in kg"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Price per kg:{" "}
-                        {formatPrice(
-                          Number(selectedVar?.price) || product.base_price
-                        )}
-                      </p>
+                      {perKgPriceForDisplay != null && (
+                        <p className="text-xs text-muted-foreground">
+                          Price per kg (based on selected option):{" "}
+                          {formatPrice(perKgPriceForDisplay)}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
