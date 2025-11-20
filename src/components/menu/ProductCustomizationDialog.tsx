@@ -35,13 +35,47 @@ interface ProductCustomizationDialogProps {
   ) => void;
 }
 
-// Helper to safely normalize variations into an array
-const getVariationsArray = (product?: Product | null): any[] => {
+type NormalizedVariation = {
+  _id: string;
+  name: string;
+  price?: number;
+  variations?: any[];
+  [key: string]: any;
+};
+
+// Helper: turn whatever is in product.variations into a nice array
+const getVariationsArray = (product?: Product | null): NormalizedVariation[] => {
   if (!product?.variations) return [];
+
+  let list: any[] = [];
   const v = product.variations;
-  if (Array.isArray(v)) return v;
-  if (typeof v === "object") return Object.values(v);
-  return [];
+
+  if (Array.isArray(v)) {
+    list = v;
+  } else if (typeof v === "object") {
+    // object like { Egg: {...}, Eggless: {...} }
+    list = Object.entries(v).map(([key, value]) => ({
+      name: key,
+      ...(value as any),
+    }));
+  } else {
+    return [];
+  }
+
+  return list.map((item, idx) => {
+    const name =
+      item.name ??
+      item.type ??
+      item.label ??
+      item.title ??
+      `Option ${idx + 1}`;
+
+    return {
+      ...item,
+      name,
+      _id: String(item.id ?? name ?? idx),
+    };
+  });
 };
 
 export const ProductCustomizationDialog = ({
@@ -72,17 +106,18 @@ export const ProductCustomizationDialog = ({
 
   const formatPrice = (price: number) => `₹${price.toFixed(0)}`;
 
+  const selectedVar = variationsArray.find(
+    (v) => v.name === selectedVariation
+  );
+  const hasNestedVariations =
+    selectedVar?.variations && Array.isArray(selectedVar.variations);
+
   const calculateTotalPrice = () => {
-    if (!product || !selectedVariation) return product?.base_price || 0;
-
-    const selectedVar = variationsArray.find((v: any) => v.name === selectedVariation);
-    if (!selectedVar) return product.base_price;
-
-    const hasNestedVariations =
-      selectedVar.variations && Array.isArray(selectedVar.variations);
+    if (!product || !selectedVariation || !selectedVar)
+      return product?.base_price || 0;
 
     if (hasNestedVariations && selectedWeightOption) {
-      const weightVar = selectedVar.variations.find(
+      const weightVar = selectedVar.variations!.find(
         (w: any) => w.weight === selectedWeightOption
       );
       return weightVar ? Number(weightVar.price) : product.base_price;
@@ -100,15 +135,10 @@ export const ProductCustomizationDialog = ({
   const handleAddToCart = () => {
     if (!product) return;
 
-    // Validation
-    if (!selectedVariation) {
+    if (!selectedVariation || !selectedVar) {
       toast.error("Please select a type (Egg/Eggless)");
       return;
     }
-
-    const selectedVar = variationsArray.find((v: any) => v.name === selectedVariation);
-    const hasNestedVariations =
-      selectedVar?.variations && Array.isArray(selectedVar.variations);
 
     if (hasNestedVariations && !selectedWeightOption) {
       toast.error("Please select a weight option");
@@ -125,8 +155,8 @@ export const ProductCustomizationDialog = ({
     let variationDetails: string | undefined = selectedVariation;
     let finalWeight: number | undefined = undefined;
 
-    if (hasNestedVariations && selectedWeightOption && selectedVar) {
-      const weightVar = selectedVar.variations.find(
+    if (hasNestedVariations && selectedWeightOption) {
+      const weightVar = selectedVar.variations!.find(
         (w: any) => w.weight === selectedWeightOption
       );
       if (weightVar) {
@@ -134,7 +164,7 @@ export const ProductCustomizationDialog = ({
         variationDetails = `${selectedVariation} - ${selectedWeightOption}`;
       }
     } else if (!hasNestedVariations) {
-      const basePrice = Number(selectedVar?.price) || product.base_price;
+      const basePrice = Number(selectedVar.price) || product.base_price;
       if (useCustomWeight) {
         finalWeight = weightNum;
         finalPrice = basePrice * weightNum;
@@ -148,10 +178,6 @@ export const ProductCustomizationDialog = ({
   };
 
   if (!product) return null;
-
-  const selectedVar = variationsArray.find((v: any) => v.name === selectedVariation);
-  const hasNestedVariations =
-    selectedVar?.variations && Array.isArray(selectedVar.variations);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -182,7 +208,7 @@ export const ProductCustomizationDialog = ({
                     setCustomWeight("1");
                   }}
                 >
-                  {variationsArray.map((variation: any) => {
+                  {variationsArray.map((variation) => {
                     const hasNested =
                       variation.variations &&
                       Array.isArray(variation.variations);
@@ -192,16 +218,16 @@ export const ProductCustomizationDialog = ({
 
                     return (
                       <div
-                        key={variation.name}
+                        key={variation._id}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors"
                       >
                         <div className="flex items-center space-x-3">
                           <RadioGroupItem
                             value={variation.name}
-                            id={variation.name}
+                            id={variation._id}
                           />
                           <Label
-                            htmlFor={variation.name}
+                            htmlFor={variation._id}
                             className="cursor-pointer font-normal"
                           >
                             {variation.name}
@@ -235,7 +261,7 @@ export const ProductCustomizationDialog = ({
                   value={selectedWeightOption}
                   onValueChange={setSelectedWeightOption}
                 >
-                  {selectedVar.variations.map((weightVar: any, idx: number) => (
+                  {selectedVar.variations!.map((weightVar: any, idx: number) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors"
@@ -277,10 +303,7 @@ export const ProductCustomizationDialog = ({
                         if (!checked) setCustomWeight("1");
                       }}
                     />
-                    <Label
-                      htmlFor="customize-weight"
-                      className="cursor-pointer"
-                    >
+                  <Label htmlFor="customize-weight" className="cursor-pointer">
                       Enter Custom Weight
                     </Label>
                   </div>
@@ -337,16 +360,12 @@ export const ProductCustomizationDialog = ({
                 <ReviewForm
                   productId={product.id}
                   productName={product.name}
-                  onReviewSubmitted={() =>
-                    setReviewsKey((prev) => prev + 1)
-                  }
+                  onReviewSubmitted={() => setReviewsKey((prev) => prev + 1)}
                 />
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Customer Reviews
-                </h3>
+                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
                 <ReviewsList key={reviewsKey} productId={product.id} />
               </div>
             </div>
