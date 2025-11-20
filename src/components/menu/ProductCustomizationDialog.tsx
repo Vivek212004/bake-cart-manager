@@ -43,23 +43,26 @@ type NormalizedVariation = {
   [key: string]: any;
 };
 
-// Helper: turn whatever is in product.variations into a nice array
+// Normalize all supported variation formats into a uniform array
 const getVariationsArray = (product?: Product | null): NormalizedVariation[] => {
   if (!product?.variations) return [];
 
-  let list: any[] = [];
   const v = product.variations;
+  let list: any[] = [];
 
   if (Array.isArray(v)) {
+    // Case 1: already an array
     list = v;
   } else if (typeof v === "object") {
-    // object like { Egg: {...}, Eggless: {...} }
-    list = Object.entries(v).map(([key, value]) => ({
-      name: key,
-      ...(value as any),
-    }));
-  } else {
-    return [];
+    // Case 2 & 3: { "Small": 50 } or { "1kg": 50 } or { "Egg": { ... } }
+    list = Object.entries(v).map(([key, value]) => {
+      if (typeof value === "number") {
+        // { "Small": 50 } -> { name: "Small", price: 50 }
+        return { name: key, price: value };
+      }
+      // { "Egg": { variations: [...] } } -> { name: "Egg", variations: [...] }
+      return { name: key, ...(value as any) };
+    });
   }
 
   return list.map((item, idx) => {
@@ -136,7 +139,7 @@ export const ProductCustomizationDialog = ({
     if (!product) return;
 
     if (!selectedVariation || !selectedVar) {
-      toast.error("Please select a type (Egg/Eggless)");
+      toast.error("Please select a type (Egg/Eggless / Size / Weight)");
       return;
     }
 
@@ -181,7 +184,7 @@ export const ProductCustomizationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
+      <DialogContent className="max-h=[90vh] overflow-y-auto max-w-2xl">
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
         </DialogHeader>
@@ -193,7 +196,7 @@ export const ProductCustomizationDialog = ({
           </TabsList>
 
           <TabsContent value="customize" className="space-y-6 pt-4">
-            {/* Step 1: Egg/Eggless Selection */}
+            {/* Step 1: Type / Size / Weight label selection */}
             {variationsArray.length > 0 && (
               <div className="space-y-3">
                 <Label className="text-base font-semibold">
@@ -233,7 +236,7 @@ export const ProductCustomizationDialog = ({
                             {variation.name}
                           </Label>
                         </div>
-                        {displayPrice && (
+                        {displayPrice != null && (
                           <span className="font-semibold text-primary">
                             {hasNested ? "from " : ""}
                             {formatPrice(Number(displayPrice))}
@@ -251,7 +254,7 @@ export const ProductCustomizationDialog = ({
               </div>
             )}
 
-            {/* Step 2: Weight/Price Selection (if nested variations exist) */}
+            {/* Step 2: Weight/Price selection for nested variations */}
             {selectedVariation && hasNestedVariations && selectedVar && (
               <div className="space-y-3">
                 <Label className="text-base font-semibold">
@@ -287,7 +290,7 @@ export const ProductCustomizationDialog = ({
               </div>
             )}
 
-            {/* Step 3: Custom Weight Option (for products sold by weight without nested variations) */}
+            {/* Step 3: Custom weight for per-kg pricing without nested variations */}
             {selectedVariation && !hasNestedVariations && product.is_sold_by_weight && (
               <div className="space-y-3">
                 <Label className="text-base font-semibold">
@@ -303,7 +306,10 @@ export const ProductCustomizationDialog = ({
                         if (!checked) setCustomWeight("1");
                       }}
                     />
-                  <Label htmlFor="customize-weight" className="cursor-pointer">
+                    <Label
+                      htmlFor="customize-weight"
+                      className="cursor-pointer"
+                    >
                       Enter Custom Weight
                     </Label>
                   </div>
@@ -337,7 +343,7 @@ export const ProductCustomizationDialog = ({
               </div>
             )}
 
-            {/* Total Price Display */}
+            {/* Total price */}
             <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
               <span className="text-sm font-medium text-foreground">
                 Total Price:
@@ -347,7 +353,7 @@ export const ProductCustomizationDialog = ({
               </span>
             </div>
 
-            {/* Add to Cart Button */}
+            {/* Add to cart */}
             <Button className="w-full" size="lg" onClick={handleAddToCart}>
               Add to Cart
             </Button>
