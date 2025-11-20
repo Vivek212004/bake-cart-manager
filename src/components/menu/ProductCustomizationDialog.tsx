@@ -35,6 +35,15 @@ interface ProductCustomizationDialogProps {
   ) => void;
 }
 
+// Helper to safely normalize variations into an array
+const getVariationsArray = (product?: Product | null): any[] => {
+  if (!product?.variations) return [];
+  const v = product.variations;
+  if (Array.isArray(v)) return v;
+  if (typeof v === "object") return Object.values(v);
+  return [];
+};
+
 export const ProductCustomizationDialog = ({
   product,
   open,
@@ -46,6 +55,8 @@ export const ProductCustomizationDialog = ({
   const [customWeight, setCustomWeight] = useState<string>("1");
   const [useCustomWeight, setUseCustomWeight] = useState<boolean>(false);
   const [reviewsKey, setReviewsKey] = useState(0);
+
+  const variationsArray = getVariationsArray(product);
 
   const resetDialog = () => {
     setSelectedVariation("");
@@ -64,13 +75,16 @@ export const ProductCustomizationDialog = ({
   const calculateTotalPrice = () => {
     if (!product || !selectedVariation) return product?.base_price || 0;
 
-    const selectedVar = product.variations?.find((v: any) => v.name === selectedVariation);
+    const selectedVar = variationsArray.find((v: any) => v.name === selectedVariation);
     if (!selectedVar) return product.base_price;
 
-    const hasNestedVariations = selectedVar.variations && Array.isArray(selectedVar.variations);
+    const hasNestedVariations =
+      selectedVar.variations && Array.isArray(selectedVar.variations);
 
     if (hasNestedVariations && selectedWeightOption) {
-      const weightVar = selectedVar.variations.find((w: any) => w.weight === selectedWeightOption);
+      const weightVar = selectedVar.variations.find(
+        (w: any) => w.weight === selectedWeightOption
+      );
       return weightVar ? Number(weightVar.price) : product.base_price;
     }
 
@@ -92,8 +106,9 @@ export const ProductCustomizationDialog = ({
       return;
     }
 
-    const selectedVar = product.variations?.find((v: any) => v.name === selectedVariation);
-    const hasNestedVariations = selectedVar?.variations && Array.isArray(selectedVar.variations);
+    const selectedVar = variationsArray.find((v: any) => v.name === selectedVariation);
+    const hasNestedVariations =
+      selectedVar?.variations && Array.isArray(selectedVar.variations);
 
     if (hasNestedVariations && !selectedWeightOption) {
       toast.error("Please select a weight option");
@@ -107,11 +122,13 @@ export const ProductCustomizationDialog = ({
     }
 
     let finalPrice = product.base_price;
-    let variationDetails = selectedVariation;
-    let finalWeight = undefined;
+    let variationDetails: string | undefined = selectedVariation;
+    let finalWeight: number | undefined = undefined;
 
-    if (hasNestedVariations && selectedWeightOption) {
-      const weightVar = selectedVar.variations.find((w: any) => w.weight === selectedWeightOption);
+    if (hasNestedVariations && selectedWeightOption && selectedVar) {
+      const weightVar = selectedVar.variations.find(
+        (w: any) => w.weight === selectedWeightOption
+      );
       if (weightVar) {
         finalPrice = Number(weightVar.price);
         variationDetails = `${selectedVariation} - ${selectedWeightOption}`;
@@ -132,8 +149,9 @@ export const ProductCustomizationDialog = ({
 
   if (!product) return null;
 
-  const selectedVar = product.variations?.find((v: any) => v.name === selectedVariation);
-  const hasNestedVariations = selectedVar?.variations && Array.isArray(selectedVar.variations);
+  const selectedVar = variationsArray.find((v: any) => v.name === selectedVariation);
+  const hasNestedVariations =
+    selectedVar?.variations && Array.isArray(selectedVar.variations);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -149,126 +167,162 @@ export const ProductCustomizationDialog = ({
           </TabsList>
 
           <TabsContent value="customize" className="space-y-6 pt-4">
-          {/* Step 1: Egg/Eggless Selection */}
-          {product.variations && Array.isArray(product.variations) && product.variations.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Step 1: Select Type</Label>
-              <RadioGroup
-                value={selectedVariation}
-                onValueChange={(value) => {
-                  setSelectedVariation(value);
-                  setSelectedWeightOption("");
-                  setUseCustomWeight(false);
-                  setCustomWeight("1");
-                }}
-              >
-                {product.variations.map((variation: any) => {
-                  const hasNested = variation.variations && Array.isArray(variation.variations);
-                  const displayPrice = hasNested ? variation.variations[0]?.price : variation.price;
+            {/* Step 1: Egg/Eggless Selection */}
+            {variationsArray.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">
+                  Step 1: Select Type
+                </Label>
+                <RadioGroup
+                  value={selectedVariation}
+                  onValueChange={(value) => {
+                    setSelectedVariation(value);
+                    setSelectedWeightOption("");
+                    setUseCustomWeight(false);
+                    setCustomWeight("1");
+                  }}
+                >
+                  {variationsArray.map((variation: any) => {
+                    const hasNested =
+                      variation.variations &&
+                      Array.isArray(variation.variations);
+                    const displayPrice = hasNested
+                      ? variation.variations[0]?.price
+                      : variation.price;
 
-                  return (
+                    return (
+                      <div
+                        key={variation.name}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem
+                            value={variation.name}
+                            id={variation.name}
+                          />
+                          <Label
+                            htmlFor={variation.name}
+                            className="cursor-pointer font-normal"
+                          >
+                            {variation.name}
+                          </Label>
+                        </div>
+                        {displayPrice && (
+                          <span className="font-semibold text-primary">
+                            {hasNested ? "from " : ""}
+                            {formatPrice(Number(displayPrice))}
+                            {!hasNested && product.is_sold_by_weight && (
+                              <span className="text-sm text-muted-foreground">
+                                /kg
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Step 2: Weight/Price Selection (if nested variations exist) */}
+            {selectedVariation && hasNestedVariations && selectedVar && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">
+                  Step 2: Select Weight & Price
+                </Label>
+                <RadioGroup
+                  value={selectedWeightOption}
+                  onValueChange={setSelectedWeightOption}
+                >
+                  {selectedVar.variations.map((weightVar: any, idx: number) => (
                     <div
-                      key={variation.name}
+                      key={idx}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
-                        <RadioGroupItem value={variation.name} id={variation.name} />
-                        <Label htmlFor={variation.name} className="cursor-pointer font-normal">
-                          {variation.name}
+                        <RadioGroupItem
+                          value={`${weightVar.weight}`}
+                          id={`weight-${idx}`}
+                        />
+                        <Label
+                          htmlFor={`weight-${idx}`}
+                          className="cursor-pointer font-normal"
+                        >
+                          {weightVar.weight}
                         </Label>
                       </div>
-                      {displayPrice && (
-                        <span className="font-semibold text-primary">
-                          {hasNested ? "from " : ""}
-                          {formatPrice(Number(displayPrice))}
-                          {!hasNested && product.is_sold_by_weight && (
-                            <span className="text-sm text-muted-foreground">/kg</span>
-                          )}
-                        </span>
-                      )}
+                      <span className="font-semibold text-primary">
+                        {formatPrice(Number(weightVar.price))}
+                      </span>
                     </div>
-                  );
-                })}
-              </RadioGroup>
-            </div>
-          )}
-
-          {/* Step 2: Weight/Price Selection (if nested variations exist) */}
-          {selectedVariation && hasNestedVariations && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Step 2: Select Weight & Price</Label>
-              <RadioGroup value={selectedWeightOption} onValueChange={setSelectedWeightOption}>
-                {selectedVar.variations.map((weightVar: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value={`${weightVar.weight}`} id={`weight-${idx}`} />
-                      <Label htmlFor={`weight-${idx}`} className="cursor-pointer font-normal">
-                        {weightVar.weight}
-                      </Label>
-                    </div>
-                    <span className="font-semibold text-primary">
-                      {formatPrice(Number(weightVar.price))}
-                    </span>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-          )}
-
-          {/* Step 3: Custom Weight Option (for products sold by weight without nested variations) */}
-          {selectedVariation && !hasNestedVariations && product.is_sold_by_weight && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">
-                Step {hasNestedVariations ? "3" : "2"}: Customize Weight (Optional)
-              </Label>
-              <div className="space-y-3 p-4 border rounded-lg bg-accent/5">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="customize-weight"
-                    checked={useCustomWeight}
-                    onCheckedChange={(checked) => {
-                      setUseCustomWeight(checked as boolean);
-                      if (!checked) setCustomWeight("1");
-                    }}
-                  />
-                  <Label htmlFor="customize-weight" className="cursor-pointer">
-                    Enter Custom Weight
-                  </Label>
-                </div>
-
-                {useCustomWeight && (
-                  <div className="space-y-2">
-                    <Label htmlFor="weight" className="text-sm text-muted-foreground">
-                      Weight (kg)
-                    </Label>
-                    <Input
-                      id="weight"
-                      type="number"
-                      min="0.5"
-                      step="0.5"
-                      value={customWeight}
-                      onChange={(e) => setCustomWeight(e.target.value)}
-                      placeholder="Enter weight in kg"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Price per kg: {formatPrice(Number(selectedVar?.price) || product.base_price)}
-                    </p>
-                  </div>
-                )}
+                  ))}
+                </RadioGroup>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Total Price Display */}
-          <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
-            <span className="text-sm font-medium text-foreground">Total Price:</span>
-            <span className="text-2xl font-bold text-primary">
-              {formatPrice(calculateTotalPrice())}
-            </span>
-          </div>
+            {/* Step 3: Custom Weight Option (for products sold by weight without nested variations) */}
+            {selectedVariation && !hasNestedVariations && product.is_sold_by_weight && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">
+                  Step 2: Customize Weight (Optional)
+                </Label>
+                <div className="space-y-3 p-4 border rounded-lg bg-accent/5">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="customize-weight"
+                      checked={useCustomWeight}
+                      onCheckedChange={(checked) => {
+                        setUseCustomWeight(checked as boolean);
+                        if (!checked) setCustomWeight("1");
+                      }}
+                    />
+                    <Label
+                      htmlFor="customize-weight"
+                      className="cursor-pointer"
+                    >
+                      Enter Custom Weight
+                    </Label>
+                  </div>
+
+                  {useCustomWeight && (
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="weight"
+                        className="text-sm text-muted-foreground"
+                      >
+                        Weight (kg)
+                      </Label>
+                      <Input
+                        id="weight"
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        value={customWeight}
+                        onChange={(e) => setCustomWeight(e.target.value)}
+                        placeholder="Enter weight in kg"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Price per kg:{" "}
+                        {formatPrice(
+                          Number(selectedVar?.price) || product.base_price
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Total Price Display */}
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
+              <span className="text-sm font-medium text-foreground">
+                Total Price:
+              </span>
+              <span className="text-2xl font-bold text-primary">
+                {formatPrice(calculateTotalPrice())}
+              </span>
+            </div>
 
             {/* Add to Cart Button */}
             <Button className="w-full" size="lg" onClick={handleAddToCart}>
@@ -283,12 +337,16 @@ export const ProductCustomizationDialog = ({
                 <ReviewForm
                   productId={product.id}
                   productName={product.name}
-                  onReviewSubmitted={() => setReviewsKey((prev) => prev + 1)}
+                  onReviewSubmitted={() =>
+                    setReviewsKey((prev) => prev + 1)
+                  }
                 />
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  Customer Reviews
+                </h3>
                 <ReviewsList key={reviewsKey} productId={product.id} />
               </div>
             </div>
