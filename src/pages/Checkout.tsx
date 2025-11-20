@@ -9,13 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { distanceFromBakeryKm } from "@/lib/distance";
+import { MAX_DELIVERY_KM } from "@/config/location";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, totalAmount, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
-  
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -23,6 +25,12 @@ const Checkout = () => {
     address: "",
     notes: "",
   });
+
+  // Location-related state
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,8 +47,67 @@ const Checkout = () => {
     }
   }, [navigate, items]);
 
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported in this browser");
+      return;
+    }
+
+    setLoadingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const dist = distanceFromBakeryKm(latitude, longitude);
+
+        setLat(latitude);
+        setLng(longitude);
+        setDistanceKm(dist);
+        setLoadingLocation(false);
+
+        if (dist > MAX_DELIVERY_KM) {
+          toast.error(
+            `Sorry, we only deliver within ${MAX_DELIVERY_KM} km. You are ~${dist.toFixed(
+              1
+            )} km away.`
+          );
+        } else {
+          toast.success(
+            `Great! You are ~${dist.toFixed(1)} km away – we can deliver.`
+          );
+        }
+      },
+      (err) => {
+        console.error(err);
+        toast.error("Could not get your location");
+        setLoadingLocation(false);
+      }
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast.error("Please log in to place an order.");
+      return;
+    }
+
+    // Enforce 6 km radius
+    if (lat == null || lng == null || distanceKm == null) {
+      toast.error(
+        "Please click 'Use my current location' to confirm you are within our delivery radius."
+      );
+      return;
+    }
+
+    if (distanceKm > MAX_DELIVERY_KM) {
+      toast.error(
+        `Your location is outside our ${MAX_DELIVERY_KM} km delivery radius.`
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,6 +122,10 @@ const Checkout = () => {
           notes: formData.notes,
           total_amount: totalAmount,
           status: "pending",
+          // Optional: only if you add these columns in Supabase
+          // delivery_lat: lat,
+          // delivery_lng: lng,
+          // delivery_distance_km: distanceKm,
         })
         .select()
         .single();
@@ -110,7 +181,9 @@ const Checkout = () => {
                       id="name"
                       required
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                     />
                   </div>
                   <div>
@@ -120,7 +193,9 @@ const Checkout = () => {
                       type="tel"
                       required
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
                     />
                   </div>
                   <div>
@@ -130,7 +205,9 @@ const Checkout = () => {
                       type="email"
                       required
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
                     />
                   </div>
                   <div>
@@ -140,19 +217,56 @@ const Checkout = () => {
                       required
                       rows={3}
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
                     />
                   </div>
+
+                  {/* Location section */}
+                  <div className="space-y-2">
+                    <Label>Verify Delivery Location *</Label>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleUseMyLocation}
+                        disabled={loadingLocation}
+                      >
+                        {loadingLocation
+                          ? "Getting location..."
+                          : "Use my current location"}
+                      </Button>
+
+                      {distanceKm != null && (
+                        <span className="text-sm text-muted-foreground">
+                          Distance from bakery: {distanceKm.toFixed(2)} km
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      We currently deliver only within {MAX_DELIVERY_KM} km
+                      radius from the bakery.
+                    </p>
+                  </div>
+
                   <div>
                     <Label htmlFor="notes">Order Notes (Optional)</Label>
                     <Textarea
                       id="notes"
                       rows={2}
                       value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                      }
                     />
                   </div>
-                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    disabled={loading}
+                  >
                     {loading ? "Placing Order..." : "Place Order"}
                   </Button>
                 </form>
@@ -169,15 +283,21 @@ const Checkout = () => {
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {item.name} {item.variation && `(${item.variation})`} x {item.quantity}
+                      {item.name}{" "}
+                      {item.variation && `(${item.variation})`} x{" "}
+                      {item.quantity}
                     </span>
-                    <span className="text-foreground">{formatPrice(item.price * item.quantity)}</span>
+                    <span className="text-foreground">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
                   </div>
                 ))}
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-lg font-bold">
                     <span className="text-foreground">Total</span>
-                    <span className="text-primary">{formatPrice(totalAmount)}</span>
+                    <span className="text-primary">
+                      {formatPrice(totalAmount)}
+                    </span>
                   </div>
                 </div>
               </CardContent>
