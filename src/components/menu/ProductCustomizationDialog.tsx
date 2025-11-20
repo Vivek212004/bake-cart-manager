@@ -44,6 +44,7 @@ type NormalizedVariation = {
 };
 
 // Normalize all supported variation formats into a uniform array
+//hi
 const getVariationsArray = (product?: Product | null): NormalizedVariation[] => {
   if (!product?.variations) return [];
 
