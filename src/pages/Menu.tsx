@@ -25,6 +25,7 @@ interface Category {
   id: string;
   name: string;
   display_order: number;
+  parent_id?: string | null;
 }
 
 interface Product {
@@ -49,6 +50,7 @@ const Menu = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -83,12 +85,18 @@ const Menu = () => {
 
       // Resolve image URLs and ratings:
       const parsed = (productsData || []).map((p: any) => {
-        const ratings = Array.isArray(p.product_ratings) ? p.product_ratings[0] : p.product_ratings;
+        const ratings = Array.isArray(p.product_ratings)
+          ? p.product_ratings[0]
+          : p.product_ratings;
         const prod: Product = {
           ...p,
-          image_url: p.image_url ? String(p.image_url).trim().replace(/^["']|["']$/g, "") : null,
+          image_url: p.image_url
+            ? String(p.image_url).trim().replace(/^["']|["']$/g, "")
+            : null,
           image_url_resolved: null,
-          average_rating: ratings?.average_rating ? Number(ratings.average_rating) : undefined,
+          average_rating: ratings?.average_rating
+            ? Number(ratings.average_rating)
+            : undefined,
           review_count: ratings?.review_count || undefined,
         };
 
@@ -121,24 +129,60 @@ const Menu = () => {
     }
   };
 
+  // Compute top-level categories (no parent) and a map from parent -> children
+  const { topCategories, subcategoriesMap } = useMemo(() => {
+    const tops: Category[] = [];
+    const map: Record<string, Category[]> = {};
+    (categories || []).forEach((c) => {
+      if (!c.parent_id) {
+        tops.push(c);
+      } else {
+        map[c.parent_id] = map[c.parent_id] || [];
+        map[c.parent_id].push(c);
+      }
+    });
+    return { topCategories: tops, subcategoriesMap: map };
+  }, [categories]);
+
+  // When switching top-level category reset selectedSubcategory
+  const handleCategoryChange = (catId: string) => {
+    setSelectedCategory(catId);
+    setSelectedSubcategory(null);
+  };
+
   const filteredProducts = useMemo(() => {
-    let filtered = selectedCategory === "all" ? products : products.filter((p) => p.category_id === selectedCategory);
-    
+    let filtered = products;
+
+    // Category/subcategory logic:
+    if (selectedCategory !== "all") {
+      // if a subcategory is selected, filter strictly by it
+      if (selectedSubcategory) {
+        filtered = filtered.filter((p) => p.category_id === selectedSubcategory);
+      } else {
+        // include products in the top category and any of its subcategories
+        const allowed = [selectedCategory];
+        const subs = subcategoriesMap[selectedCategory] || [];
+        subs.forEach((s) => allowed.push(s.id));
+        filtered = filtered.filter((p) => allowed.includes(p.category_id));
+      }
+    }
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((p) => 
-        p.name.toLowerCase().includes(query) || 
-        p.description?.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          p.description?.toLowerCase().includes(query)
       );
     }
-    
+
     // Apply egg/eggless filter
     if (eggFilter !== "all") {
       filtered = filtered.filter((p) => {
         const eggType = (p as any).egg_type;
         if (!eggType) return true;
-        
+
         if (eggFilter === "eggless") {
           return eggType === "eggless" || eggType === "both";
         } else if (eggFilter === "egg") {
@@ -147,9 +191,9 @@ const Menu = () => {
         return true;
       });
     }
-    
+
     return filtered;
-  }, [products, selectedCategory, searchQuery, eggFilter]);
+  }, [products, selectedCategory, selectedSubcategory, searchQuery, eggFilter, subcategoriesMap]);
 
   const formatPrice = (price: number) => {
     return `₹${price.toFixed(0)}`;
@@ -197,15 +241,38 @@ const Menu = () => {
           </p>
         </div>
 
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+        <Tabs value={selectedCategory} onValueChange={handleCategoryChange} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto gap-2 bg-secondary/30 p-2">
-            <TabsTrigger value="all" className="whitespace-nowrap">All Items</TabsTrigger>
-            {categories.map((category) => (
+            <TabsTrigger value="all" className="whitespace-nowrap" onClick={() => handleCategoryChange("all")}>All Items</TabsTrigger>
+            {topCategories.map((category) => (
               <TabsTrigger key={category.id} value={category.id} className="whitespace-nowrap">
                 {category.name}
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Subcategory pills */}
+          {selectedCategory !== "all" && subcategoriesMap[selectedCategory] && (
+            <div className="mt-4 flex gap-2 flex-wrap">
+              <Badge
+                variant={selectedSubcategory === null ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setSelectedSubcategory(null)}
+              >
+                All {categories.find(c => c.id === selectedCategory)?.name}
+              </Badge>
+              {subcategoriesMap[selectedCategory].map((sub) => (
+                <Badge
+                  key={sub.id}
+                  variant={selectedSubcategory === sub.id ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedSubcategory(sub.id)}
+                >
+                  {sub.name}
+                </Badge>
+              ))}
+            </div>
+          )}
 
           {/* Search and Filters */}
           <div className="mt-6 space-y-4">
