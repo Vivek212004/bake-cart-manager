@@ -26,6 +26,7 @@ interface Category {
   name: string;
   display_order: number;
   parent_id?: string | null;
+  has_egg_option?: boolean;
 }
 
 interface Product {
@@ -148,6 +149,7 @@ const Menu = () => {
   const handleCategoryChange = (catId: string) => {
     setSelectedCategory(catId);
     setSelectedSubcategory(null);
+    setEggFilter("all"); // reset egg filter when changing category
   };
 
   const filteredProducts = useMemo(() => {
@@ -177,8 +179,11 @@ const Menu = () => {
       );
     }
 
-    // Apply egg/eggless filter
-    if (eggFilter !== "all") {
+    // Apply egg/eggless filter ONLY if current selected top-level category allows it
+    const currentCategory = categories.find((c) => c.id === selectedCategory);
+    const categoryAllowsEggFilter = !!currentCategory?.has_egg_option;
+
+    if (categoryAllowsEggFilter && eggFilter !== "all") {
       filtered = filtered.filter((p) => {
         const eggType = (p as any).egg_type;
         if (!eggType) return true;
@@ -193,7 +198,7 @@ const Menu = () => {
     }
 
     return filtered;
-  }, [products, selectedCategory, selectedSubcategory, searchQuery, eggFilter, subcategoriesMap]);
+  }, [products, selectedCategory, selectedSubcategory, searchQuery, eggFilter, subcategoriesMap, categories]);
 
   const formatPrice = (price: number) => {
     return `₹${price.toFixed(0)}`;
@@ -228,6 +233,10 @@ const Menu = () => {
       </div>
     );
   }
+
+  // Determine whether to show egg filter (only when selected top category supports it)
+  const currentTopCategory = categories.find((c) => c.id === selectedCategory);
+  const showEggFilter = !!currentTopCategory?.has_egg_option;
 
   return (
     <div className="min-h-screen bg-background">
@@ -296,33 +305,35 @@ const Menu = () => {
               )}
             </div>
 
-            {/* Egg/Eggless Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Filter by:</span>
-              <div className="flex gap-2">
-                <Badge
-                  variant={eggFilter === "all" ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setEggFilter("all")}
-                >
-                  All
-                </Badge>
-                <Badge
-                  variant={eggFilter === "egg" ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setEggFilter("egg")}
-                >
-                  Egg
-                </Badge>
-                <Badge
-                  variant={eggFilter === "eggless" ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setEggFilter("eggless")}
-                >
-                  Eggless
-                </Badge>
+            {/* Egg/Eggless Filter – only shown when the selected top category allows it */}
+            {showEggFilter && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Filter by:</span>
+                <div className="flex gap-2">
+                  <Badge
+                    variant={eggFilter === "all" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setEggFilter("all")}
+                  >
+                    All
+                  </Badge>
+                  <Badge
+                    variant={eggFilter === "egg" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setEggFilter("egg")}
+                  >
+                    Egg
+                  </Badge>
+                  <Badge
+                    variant={eggFilter === "eggless" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setEggFilter("eggless")}
+                  >
+                    Eggless
+                  </Badge>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="mt-8">
