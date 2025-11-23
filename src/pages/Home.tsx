@@ -17,6 +17,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import { TopReviewsShowcase } from "@/components/home/TopReviewsShowcase";
 
 
 
@@ -202,6 +203,9 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Top Reviews Showcase */}
+      <TopReviewsShowcase />
 
       {/* CTA Section */}
       <section className="py-20 bg-primary/5">

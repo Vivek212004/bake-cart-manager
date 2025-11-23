@@ -132,6 +132,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          photo_url: string | null
           product_id: string
           rating: number
           review_text: string | null
@@ -141,6 +142,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          photo_url?: string | null
           product_id: string
           rating: number
           review_text?: string | null
@@ -150,6 +152,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          photo_url?: string | null
           product_id?: string
           rating?: number
           review_text?: string | null
@@ -172,6 +175,7 @@ export type Database = {
           category_id: string | null
           created_at: string | null
           description: string | null
+          egg_type: string
           id: string
           image_url: string | null
           is_available: boolean | null
@@ -185,6 +189,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string | null
           description?: string | null
+          egg_type?: string
           id?: string
           image_url?: string | null
           is_available?: boolean | null
@@ -198,6 +203,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string | null
           description?: string | null
+          egg_type?: string
           id?: string
           image_url?: string | null
           is_available?: boolean | null

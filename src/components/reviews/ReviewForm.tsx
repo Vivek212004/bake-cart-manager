@@ -56,6 +56,37 @@ export const ReviewForm = ({ productId, productName, onReviewSubmitted }: Review
         return;
       }
 
+      // Check if user has purchased this product
+      const { data: purchaseData, error: purchaseError } = await supabase
+        .from("order_items")
+        .select("id, order_id")
+        .eq("product_id", productId)
+        .limit(1);
+
+      if (purchaseError) {
+        console.error("Error checking purchase:", purchaseError);
+        toast.error("Failed to verify purchase");
+        return;
+      }
+
+      if (!purchaseData || purchaseData.length === 0) {
+        toast.error("You can only review products you have purchased");
+        return;
+      }
+
+      // Verify the order belongs to the user
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("id", purchaseData[0].order_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (orderError || !orderData) {
+        toast.error("You can only review products you have purchased");
+        return;
+      }
+
       let photoUrl = null;
 
       // Upload photo if provided
