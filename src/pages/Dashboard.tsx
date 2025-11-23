@@ -168,17 +168,43 @@ const Dashboard = () => {
   };
 
   const fetchDeliveryPersons = async () => {
-    const { data, error } = await supabase
+    // First get delivery person user IDs
+    const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
-      .select("user_id, profiles(full_name, phone)")
+      .select("user_id")
       .eq("role", "delivery_person");
 
-    if (error) {
-      console.error("Failed to fetch delivery persons:", error);
+    if (roleError) {
+      console.error("Failed to fetch delivery person roles:", roleError);
       toast.error("Failed to fetch delivery persons");
       return;
     }
-    setDeliveryPersons(data || []);
+
+    if (!roleData || roleData.length === 0) {
+      setDeliveryPersons([]);
+      return;
+    }
+
+    // Then get their profiles
+    const userIds = roleData.map(r => r.user_id);
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, phone")
+      .in("user_id", userIds);
+
+    if (profileError) {
+      console.error("Failed to fetch delivery person profiles:", profileError);
+      toast.error("Failed to fetch delivery persons");
+      return;
+    }
+
+    // Combine the data
+    const combined = roleData.map(role => ({
+      user_id: role.user_id,
+      profiles: profileData?.find(p => p.user_id === role.user_id) || null
+    }));
+
+    setDeliveryPersons(combined);
   };
 
   const fetchDeliveryPersonOrders = async (userId: string) => {
