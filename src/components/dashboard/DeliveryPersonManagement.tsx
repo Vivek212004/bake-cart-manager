@@ -40,28 +40,16 @@ export const DeliveryPersonManagement = ({
     setIsCreating(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("You must be logged in");
-        return;
+      const { data, error } = await supabase.functions.invoke('create-delivery-person', {
+        body: formData
+      });
+
+      if (error) {
+        throw error;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-delivery-person`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create delivery person');
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       toast.success("Delivery person created successfully");
@@ -69,6 +57,7 @@ export const DeliveryPersonManagement = ({
       setIsCreateDialogOpen(false);
       onRefresh();
     } catch (error: any) {
+      console.error("Error creating delivery person:", error);
       toast.error(error.message || "Failed to create delivery person");
     } finally {
       setIsCreating(false);
