@@ -66,14 +66,14 @@ const Checkout = () => {
         setLoadingLocation(false);
 
         if (dist > MAX_DELIVERY_KM) {
-          toast.error(
-            `Sorry, we only deliver within ${MAX_DELIVERY_KM} km. You are ~${dist.toFixed(
+          toast.warning(
+            `You are ~${dist.toFixed(
               1
-            )} km away.`
+            )} km away. Delivery is not available, but you can place an order for pickup.`
           );
         } else {
           toast.success(
-            `Great! You are ~${dist.toFixed(1)} km away – we can deliver.`
+            `Great! You are ~${dist.toFixed(1)} km away – delivery available.`
           );
         }
       },
@@ -93,17 +93,10 @@ const Checkout = () => {
       return;
     }
 
-    // Enforce 6 km radius
+    // Check if location was verified
     if (lat == null || lng == null || distanceKm == null) {
       toast.error(
-        "Please click 'Use my current location' to confirm you are within our delivery radius."
-      );
-      return;
-    }
-
-    if (distanceKm > MAX_DELIVERY_KM) {
-      toast.error(
-        `Your location is outside our ${MAX_DELIVERY_KM} km delivery radius.`
+        "Please click 'Use my current location' to verify your location."
       );
       return;
     }
@@ -239,15 +232,25 @@ const Checkout = () => {
                       </Button>
 
                       {distanceKm != null && (
-                        <span className="text-sm text-muted-foreground">
+                        <span className={`text-sm ${distanceKm > MAX_DELIVERY_KM ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                           Distance from bakery: {distanceKm.toFixed(2)} km
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      We currently deliver only within {MAX_DELIVERY_KM} km
-                      radius from the bakery.
-                    </p>
+                    {distanceKm != null && distanceKm > MAX_DELIVERY_KM ? (
+                      <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                        <p className="text-sm text-destructive font-medium">
+                          ⚠️ Delivery not available for your location (beyond {MAX_DELIVERY_KM} km)
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          You can still place your order for pickup at our bakery.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        We deliver within {MAX_DELIVERY_KM} km radius from the bakery.
+                      </p>
+                    )}
                   </div>
 
                   <div>
