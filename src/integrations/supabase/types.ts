@@ -95,6 +95,10 @@ export type Database = {
           delivery_address: string | null
           id: string
           notes: string | null
+          payment_method: string
+          payment_status: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
           status: string | null
           total_amount: number
           updated_at: string | null
@@ -108,6 +112,10 @@ export type Database = {
           delivery_address?: string | null
           id?: string
           notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           status?: string | null
           total_amount: number
           updated_at?: string | null
@@ -121,6 +129,10 @@ export type Database = {
           delivery_address?: string | null
           id?: string
           notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           status?: string | null
           total_amount?: number
           updated_at?: string | null
