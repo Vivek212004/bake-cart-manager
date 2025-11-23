@@ -4,7 +4,6 @@ import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +12,20 @@ import { Trash2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AnalyticsCards } from "@/components/dashboard/AnalyticsCards";
+import { OrderCard } from "@/components/dashboard/OrderCard";
+import { DeliveryPersonView } from "@/components/dashboard/DeliveryPersonView";
+import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeliveryPerson, setIsDeliveryPerson] = useState(false);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
   
   // New product form
   const [newProduct, setNewProduct] = useState({
@@ -82,7 +87,15 @@ const Dashboard = () => {
 
       if (roleData?.role === "admin") {
         setIsAdmin(true);
-        await Promise.all([fetchOrders(), fetchProducts(), fetchCategories()]);
+        await Promise.all([
+          fetchOrders(), 
+          fetchProducts(), 
+          fetchCategories(), 
+          fetchDeliveryPersons()
+        ]);
+      } else if (roleData?.role === "delivery_person") {
+        setIsDeliveryPerson(true);
+        await fetchDeliveryPersonOrders(user.id);
       } else {
         await fetchUserOrders(user.id);
       }
@@ -153,6 +166,36 @@ const Dashboard = () => {
     setCategories(data || []);
   };
 
+  const fetchDeliveryPersons = async () => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("user_id, profiles(full_name)")
+      .eq("role", "delivery_person");
+
+    if (error) {
+      toast.error("Failed to fetch delivery persons");
+      return;
+    }
+    setDeliveryPersons(data || []);
+  };
+
+  const fetchDeliveryPersonOrders = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items (*)
+      `)
+      .eq("delivery_person_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Failed to fetch delivery orders");
+      return;
+    }
+    setOrders(data || []);
+  };
+
   const handleDeleteProduct = async (productId: string) => {
     const { error } = await supabase
       .from("products")
@@ -180,6 +223,23 @@ const Dashboard = () => {
     }
 
     toast.success("Order status updated");
+  };
+
+  const handleAssignDeliveryPerson = async (orderId: string, deliveryPersonId: string) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ 
+        delivery_person_id: deliveryPersonId === 'unassigned' ? null : deliveryPersonId 
+      })
+      .eq("id", orderId);
+
+    if (error) {
+      toast.error("Failed to assign delivery person");
+      return;
+    }
+
+    toast.success("Delivery person assigned");
+    fetchOrders();
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -225,6 +285,18 @@ const Dashboard = () => {
     );
   }
 
+  // Delivery person view
+  if (isDeliveryPerson) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 pt-32 pb-16">
+          <DeliveryPersonView orders={orders} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -233,6 +305,8 @@ const Dashboard = () => {
         <h1 className="text-4xl font-bold mb-8 text-foreground">
           {isAdmin ? "Admin Dashboard" : "My Orders"}
         </h1>
+
+        {isAdmin && <AnalyticsCards orders={orders} />}
 
         <Tabs defaultValue="orders" className="w-full">
           <TabsList>
@@ -243,63 +317,14 @@ const Dashboard = () => {
           <TabsContent value="orders" className="mt-6">
             <div className="space-y-4">
               {orders.map((order) => (
-                <Card key={order.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle>Order #{order.id.slice(0, 8)}</CardTitle>
-                        <CardDescription>
-                          {new Date(order.created_at).toLocaleDateString()} - {order.customer_name}
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col gap-2 items-end">
-                        <Badge variant={
-                          order.status === 'delivered' ? 'default' :
-                          order.status === 'ready' ? 'default' :
-                          order.status === 'preparing' ? 'secondary' :
-                          order.status === 'cancelled' ? 'destructive' :
-                          'outline'
-                        }>
-                          {order.status}
-                        </Badge>
-                        {isAdmin && (
-                          <Select
-                            value={order.status}
-                            onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
-                          >
-                            <SelectTrigger className="w-32 h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="preparing">Preparing</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="delivered">Delivered</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p className="font-semibold">Items:</p>
-                      {order.order_items?.map((item: any) => (
-                        <div key={item.id} className="flex justify-between text-sm">
-                          <span>{item.product_name} x {item.quantity}</span>
-                          <span>₹{item.subtotal}</span>
-                        </div>
-                      ))}
-                      <div className="pt-2 border-t border-border">
-                        <div className="flex justify-between font-bold">
-                          <span>Total:</span>
-                          <span className="text-primary">₹{order.total_amount}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  isAdmin={isAdmin}
+                  deliveryPersons={deliveryPersons}
+                  onUpdateStatus={isAdmin ? handleUpdateOrderStatus : undefined}
+                  onAssignDeliveryPerson={isAdmin ? handleAssignDeliveryPerson : undefined}
+                />
               ))}
               
               {orders.length === 0 && (
