@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AnalyticsCards } from "@/components/dashboard/AnalyticsCards";
 import { OrderCard } from "@/components/dashboard/OrderCard";
 import { DeliveryPersonView } from "@/components/dashboard/DeliveryPersonView";
+import { DeliveryPersonManagement } from "@/components/dashboard/DeliveryPersonManagement";
 import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
@@ -169,10 +170,11 @@ const Dashboard = () => {
   const fetchDeliveryPersons = async () => {
     const { data, error } = await supabase
       .from("user_roles")
-      .select("user_id, profiles(full_name)")
+      .select("user_id, profiles(full_name, phone)")
       .eq("role", "delivery_person");
 
     if (error) {
+      console.error("Failed to fetch delivery persons:", error);
       toast.error("Failed to fetch delivery persons");
       return;
     }
@@ -312,6 +314,7 @@ const Dashboard = () => {
           <TabsList>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             {isAdmin && <TabsTrigger value="products">Products</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="delivery">Delivery Personnel</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="orders" className="mt-6">
@@ -474,6 +477,15 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="delivery" className="mt-6">
+              <DeliveryPersonManagement 
+                deliveryPersons={deliveryPersons}
+                onRefresh={fetchDeliveryPersons}
+              />
             </TabsContent>
           )}
         </Tabs>
