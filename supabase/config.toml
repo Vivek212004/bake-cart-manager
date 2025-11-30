@@ -1,1 +1,10 @@
-project_id = "uzimddhgsfkjzdzexpjr"
+project_id = "dogevqugqskkeizpbroq"
+
+[functions.create-delivery-person]
+verify_jwt = false
+
+[functions.create-razorpay-order]
+verify_jwt = false
+
+[functions.verify-razorpay-payment]
+verify_jwt = false
