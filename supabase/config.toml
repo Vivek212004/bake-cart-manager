@@ -1,4 +1,4 @@
-project_id = "dogevqugqskkeizpbroq"
+project_id = "uzimddhgsfkjzdzexpjr"
 
 [functions.create-delivery-person]
 verify_jwt = false
