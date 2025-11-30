@@ -222,7 +222,17 @@ const Checkout = () => {
         .from("order_items")
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Order items error:", itemsError);
+        // Check if it's a foreign key constraint error (invalid product_id)
+        if (itemsError.message?.includes('foreign key constraint') || itemsError.code === '23503') {
+          toast.error("Your cart contains invalid items. Please clear your cart and add items again.");
+          clearCart();
+          navigate("/menu");
+          return;
+        }
+        throw itemsError;
+      }
 
       // Handle payment based on method
       if (paymentMethod === 'razorpay') {
