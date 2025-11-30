@@ -1,4 +1,6 @@
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': '*', // or specific origin in production
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, X-Client-Info, Apikey, Content-Type',
+  'Access-Control-Max-Age': '86400'
 }
