@@ -7,10 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { distanceFromBakeryKm } from "@/lib/distance";
 import { MAX_DELIVERY_KM } from "@/config/location";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -25,6 +32,8 @@ const Checkout = () => {
     address: "",
     notes: "",
   });
+
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">("razorpay");
 
   // Location-related state
   const [lat, setLat] = useState<number | null>(null);
@@ -85,6 +94,82 @@ const Checkout = () => {
     );
   };
 
+  const handleRazorpayPayment = async (orderId: string) => {
+    try {
+      // Create Razorpay order
+      const { data: razorpayData, error: razorpayError } = await supabase.functions.invoke(
+        'create-razorpay-order',
+        {
+          body: {
+            amount: totalAmount,
+            orderId: orderId,
+          },
+        }
+      );
+
+      if (razorpayError || !razorpayData.success) {
+        throw new Error(razorpayData?.error || 'Failed to create payment order');
+      }
+
+      console.log('Razorpay order created:', razorpayData.razorpayOrderId);
+
+      // Initialize Razorpay
+      const options = {
+        key: razorpayData.keyId,
+        amount: razorpayData.amount,
+        currency: razorpayData.currency,
+        name: 'Emoticon Bakery',
+        description: 'Order Payment',
+        order_id: razorpayData.razorpayOrderId,
+        handler: async function (response: any) {
+          console.log('Payment successful, verifying...');
+          
+          // Verify payment
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+            'verify-razorpay-payment',
+            {
+              body: {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                orderId: orderId,
+              },
+            }
+          );
+
+          if (verifyError || !verifyData.success) {
+            throw new Error('Payment verification failed');
+          }
+
+          clearCart();
+          toast.success('Payment successful! Order confirmed.');
+          navigate('/dashboard');
+        },
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        theme: {
+          color: '#F97316',
+        },
+        modal: {
+          ondismiss: function () {
+            toast.error('Payment cancelled');
+            setLoading(false);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error: any) {
+      console.error('Razorpay payment error:', error);
+      toast.error(error.message || 'Payment failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -115,10 +200,8 @@ const Checkout = () => {
           notes: formData.notes,
           total_amount: totalAmount,
           status: "pending",
-          // Optional: only if you add these columns in Supabase
-          // delivery_lat: lat,
-          // delivery_lng: lng,
-          // delivery_distance_km: distanceKm,
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'cod' ? 'pending' : 'pending',
         })
         .select()
         .single();
@@ -141,13 +224,19 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      clearCart();
-      toast.success("Order placed successfully!");
-      navigate("/dashboard");
+      // Handle payment based on method
+      if (paymentMethod === 'razorpay') {
+        await handleRazorpayPayment(order.id);
+      } else {
+        // COD - order placed successfully
+        clearCart();
+        toast.success("Order placed successfully! Pay on delivery.");
+        navigate("/dashboard");
+        setLoading(false);
+      }
     } catch (error: any) {
       toast.error("Failed to place order. Please try again.");
       console.error(error);
-    } finally {
       setLoading(false);
     }
   };
@@ -264,13 +353,38 @@ const Checkout = () => {
                       }
                     />
                   </div>
+
+                  {/* Payment Method Selection */}
+                  <div className="space-y-3">
+                    <Label>Payment Method *</Label>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(value) => setPaymentMethod(value as "razorpay" | "cod")}
+                    >
+                      <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent cursor-pointer">
+                        <RadioGroupItem value="razorpay" id="razorpay" />
+                        <Label htmlFor="razorpay" className="flex-1 cursor-pointer">
+                          <div className="font-medium">Online Payment (Razorpay)</div>
+                          <div className="text-xs text-muted-foreground">Pay securely via UPI, Card, Net Banking</div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent cursor-pointer">
+                        <RadioGroupItem value="cod" id="cod" />
+                        <Label htmlFor="cod" className="flex-1 cursor-pointer">
+                          <div className="font-medium">Cash on Delivery</div>
+                          <div className="text-xs text-muted-foreground">Pay when you receive your order</div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full"
                     size="lg"
                     disabled={loading}
                   >
-                    {loading ? "Placing Order..." : "Place Order"}
+                    {loading ? "Processing..." : paymentMethod === 'razorpay' ? "Proceed to Payment" : "Place Order"}
                   </Button>
                 </form>
               </CardContent>
