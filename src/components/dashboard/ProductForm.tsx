@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { VariationManager, ProductVariation } from "./VariationManager";
-import { WeightVariationManager, WeightVariation } from "./WeightVariationManager";
 
 interface ProductFormData {
   name: string;
@@ -15,10 +14,8 @@ interface ProductFormData {
   category_id: string;
   is_sold_by_weight: boolean;
   egg_type: "egg" | "eggless" | "both";
-  variations?: ProductVariation[] | WeightVariation[];
+  variations?: ProductVariation[];
   is_available?: boolean;
-  min_weight_grams?: number;
-  allow_custom_weight?: boolean;
 }
 
 interface ProductFormProps {
@@ -39,8 +36,6 @@ export const ProductForm = ({ initialData, categories, onSubmit, submitLabel }: 
       egg_type: "both",
       variations: [],
       is_available: true,
-      min_weight_grams: 250,
-      allow_custom_weight: true,
     }
   );
 
@@ -148,22 +143,10 @@ export const ProductForm = ({ initialData, categories, onSubmit, submitLabel }: 
         </div>
       )}
 
-      {formData.is_sold_by_weight ? (
-        <WeightVariationManager
-          pricePerKg={parseFloat(formData.base_price) || 0}
-          variations={(formData.variations as WeightVariation[]) || []}
-          minWeightGrams={formData.min_weight_grams || 250}
-          allowCustomWeight={formData.allow_custom_weight ?? true}
-          onVariationsChange={(variations) => setFormData({ ...formData, variations })}
-          onMinWeightChange={(minWeight) => setFormData({ ...formData, min_weight_grams: minWeight })}
-          onAllowCustomWeightChange={(allow) => setFormData({ ...formData, allow_custom_weight: allow })}
-        />
-      ) : (
-        <VariationManager
-          variations={(formData.variations as ProductVariation[]) || []}
-          onVariationsChange={(variations) => setFormData({ ...formData, variations })}
-        />
-      )}
+      <VariationManager
+        variations={formData.variations || []}
+        onVariationsChange={(variations) => setFormData({ ...formData, variations })}
+      />
 
       <Button type="submit" className="w-full">
         {submitLabel}

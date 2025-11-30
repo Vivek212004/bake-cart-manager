@@ -274,8 +274,6 @@ const Dashboard = () => {
         is_sold_by_weight: formData.is_sold_by_weight,
         egg_type: formData.egg_type,
         variations: formData.variations || null,
-        min_weight_grams: formData.min_weight_grams || null,
-        allow_custom_weight: formData.allow_custom_weight ?? true,
       }]);
 
     if (error) {
@@ -302,8 +300,6 @@ const Dashboard = () => {
         is_sold_by_weight: formData.is_sold_by_weight,
         egg_type: formData.egg_type,
         variations: formData.variations || null,
-        min_weight_grams: formData.min_weight_grams || null,
-        allow_custom_weight: formData.allow_custom_weight ?? true,
       })
       .eq("id", editingProduct.id);
 
@@ -490,8 +486,6 @@ const Dashboard = () => {
                         egg_type: editingProduct.egg_type,
                         variations: editingProduct.variations || [],
                         is_available: editingProduct.is_available,
-                        min_weight_grams: editingProduct.min_weight_grams || 250,
-                        allow_custom_weight: editingProduct.allow_custom_weight ?? true,
                       }}
                       categories={categories}
                       onSubmit={handleEditProduct}
