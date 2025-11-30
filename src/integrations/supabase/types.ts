@@ -186,6 +186,7 @@ export type Database = {
       }
       products: {
         Row: {
+          allow_custom_weight: boolean | null
           base_price: number
           category_id: string | null
           created_at: string | null
@@ -195,11 +196,13 @@ export type Database = {
           image_url: string | null
           is_available: boolean | null
           is_sold_by_weight: boolean | null
+          min_weight_grams: number | null
           name: string
           updated_at: string | null
           variations: Json | null
         }
         Insert: {
+          allow_custom_weight?: boolean | null
           base_price: number
           category_id?: string | null
           created_at?: string | null
@@ -209,11 +212,13 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean | null
           is_sold_by_weight?: boolean | null
+          min_weight_grams?: number | null
           name: string
           updated_at?: string | null
           variations?: Json | null
         }
         Update: {
+          allow_custom_weight?: boolean | null
           base_price?: number
           category_id?: string | null
           created_at?: string | null
@@ -223,6 +228,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean | null
           is_sold_by_weight?: boolean | null
+          min_weight_grams?: number | null
           name?: string
           updated_at?: string | null
           variations?: Json | null
