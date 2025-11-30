@@ -3,20 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Trash2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { AnalyticsCards } from "@/components/dashboard/AnalyticsCards";
 import { OrderCard } from "@/components/dashboard/OrderCard";
 import { DeliveryPersonView } from "@/components/dashboard/DeliveryPersonView";
 import { DeliveryPersonManagement } from "@/components/dashboard/DeliveryPersonManagement";
-import { Badge } from "@/components/ui/badge";
+import { ProductForm } from "@/components/dashboard/ProductForm";
+import { ProductCard } from "@/components/dashboard/ProductCard";
+import { BulkProductActions } from "@/components/dashboard/BulkProductActions";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -27,16 +25,10 @@ const Dashboard = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
-  
-  // New product form
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    description: "",
-    base_price: "",
-    category_id: "",
-    is_sold_by_weight: false,
-    egg_type: "both" as "egg" | "eggless" | "both",
-  });
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -270,19 +262,18 @@ const Dashboard = () => {
     fetchOrders();
   };
 
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleAddProduct = async (formData: any) => {
     const { error } = await supabase
       .from("products")
       .insert([{
-        name: newProduct.name,
-        description: newProduct.description,
-        base_price: parseFloat(newProduct.base_price),
-        category_id: newProduct.category_id,
+        name: formData.name,
+        description: formData.description,
+        base_price: parseFloat(formData.base_price),
+        category_id: formData.category_id,
         is_available: true,
-        is_sold_by_weight: newProduct.is_sold_by_weight,
-        egg_type: newProduct.egg_type,
+        is_sold_by_weight: formData.is_sold_by_weight,
+        egg_type: formData.egg_type,
+        variations: formData.variations || null,
       }]);
 
     if (error) {
@@ -291,15 +282,80 @@ const Dashboard = () => {
     }
 
     toast.success("Product added successfully");
-    setNewProduct({ 
-      name: "", 
-      description: "", 
-      base_price: "", 
-      category_id: "", 
-      is_sold_by_weight: false,
-      egg_type: "both",
-    });
+    setIsAddDialogOpen(false);
     fetchProducts();
+  };
+
+  const handleEditProduct = async (formData: any) => {
+    if (!editingProduct) return;
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: formData.name,
+        description: formData.description,
+        base_price: parseFloat(formData.base_price),
+        category_id: formData.category_id,
+        is_available: formData.is_available,
+        is_sold_by_weight: formData.is_sold_by_weight,
+        egg_type: formData.egg_type,
+        variations: formData.variations || null,
+      })
+      .eq("id", editingProduct.id);
+
+    if (error) {
+      toast.error("Failed to update product");
+      return;
+    }
+
+    toast.success("Product updated successfully");
+    setIsEditDialogOpen(false);
+    setEditingProduct(null);
+    fetchProducts();
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedProducts);
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .in("id", ids);
+
+    if (error) {
+      toast.error("Failed to delete products");
+      return;
+    }
+
+    toast.success(`Deleted ${ids.length} product${ids.length > 1 ? "s" : ""}`);
+    setSelectedProducts(new Set());
+    fetchProducts();
+  };
+
+  const handleBulkSetAvailable = async (available: boolean) => {
+    const ids = Array.from(selectedProducts);
+    const { error } = await supabase
+      .from("products")
+      .update({ is_available: available })
+      .in("id", ids);
+
+    if (error) {
+      toast.error("Failed to update products");
+      return;
+    }
+
+    toast.success(`Updated ${ids.length} product${ids.length > 1 ? "s" : ""}`);
+    setSelectedProducts(new Set());
+    fetchProducts();
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    const newSelection = new Set(selectedProducts);
+    if (newSelection.has(productId)) {
+      newSelection.delete(productId);
+    } else {
+      newSelection.add(productId);
+    }
+    setSelectedProducts(newSelection);
   };
 
   if (loading) {
@@ -369,132 +425,75 @@ const Dashboard = () => {
           {isAdmin && (
             <TabsContent value="products" className="mt-6">
               <div className="mb-6">
-                <Dialog>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <Plus className="mr-2 h-4 w-4" />
                       Add Product
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Add New Product</DialogTitle>
                       <DialogDescription>Create a new product in your bakery menu</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleAddProduct} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Product Name</Label>
-                        <Input
-                          id="name"
-                          value={newProduct.name}
-                          onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Input
-                          id="description"
-                          value={newProduct.description}
-                          onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="price">
-                          {newProduct.is_sold_by_weight ? "Price per kg (₹)" : "Base Price (₹)"}
-                        </Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          step="0.01"
-                          value={newProduct.base_price}
-                          onChange={(e) => setNewProduct({ ...newProduct, base_price: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="egg_type">Product Type</Label>
-                        <select
-                          id="egg_type"
-                          value={newProduct.egg_type}
-                          onChange={(e) => setNewProduct({ ...newProduct, egg_type: e.target.value as "egg" | "eggless" | "both" })}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          required
-                        >
-                          <option value="both">Both (Egg & Eggless)</option>
-                          <option value="egg">Egg Only</option>
-                          <option value="eggless">Eggless Only</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="weight"
-                          checked={newProduct.is_sold_by_weight}
-                          onCheckedChange={(checked) => 
-                            setNewProduct({ ...newProduct, is_sold_by_weight: checked as boolean })
-                          }
-                        />
-                        <Label htmlFor="weight" className="cursor-pointer">
-                          Sold by weight (per kg)
-                        </Label>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select
-                          value={newProduct.category_id}
-                          onValueChange={(value) => setNewProduct({ ...newProduct, category_id: value })}
-                          required
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button type="submit" className="w-full">Add Product</Button>
-                    </form>
+                    <ProductForm
+                      categories={categories}
+                      onSubmit={handleAddProduct}
+                      submitLabel="Add Product"
+                    />
                   </DialogContent>
                 </Dialog>
               </div>
 
+              <BulkProductActions
+                selectedCount={selectedProducts.size}
+                onBulkDelete={handleBulkDelete}
+                onBulkSetAvailable={handleBulkSetAvailable}
+                onClearSelection={() => setSelectedProducts(new Set())}
+              />
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {products.map((product) => (
-                  <Card key={product.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{product.name}</CardTitle>
-                          <CardDescription>{product.categories?.name}</CardDescription>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteProduct(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold text-primary">
-                        ₹{product.base_price}{product.is_sold_by_weight ? "/kg" : ""}
-                      </p>
-                      {product.is_sold_by_weight && (
-                        <Badge variant="secondary" className="mt-2">Sold by weight</Badge>
-                      )}
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground mt-2">{product.description}</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isSelected={selectedProducts.has(product.id)}
+                    onSelect={() => toggleProductSelection(product.id)}
+                    onEdit={() => {
+                      setEditingProduct(product);
+                      setIsEditDialogOpen(true);
+                    }}
+                    onDelete={() => handleDeleteProduct(product.id)}
+                  />
                 ))}
               </div>
+
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Edit Product</DialogTitle>
+                    <DialogDescription>Update product details and variations</DialogDescription>
+                  </DialogHeader>
+                  {editingProduct && (
+                    <ProductForm
+                      initialData={{
+                        name: editingProduct.name,
+                        description: editingProduct.description || "",
+                        base_price: editingProduct.base_price.toString(),
+                        category_id: editingProduct.category_id,
+                        is_sold_by_weight: editingProduct.is_sold_by_weight,
+                        egg_type: editingProduct.egg_type,
+                        variations: editingProduct.variations || [],
+                        is_available: editingProduct.is_available,
+                      }}
+                      categories={categories}
+                      onSubmit={handleEditProduct}
+                      submitLabel="Update Product"
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
 
               {products.length === 0 && (
                 <Card>
