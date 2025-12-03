@@ -260,29 +260,41 @@ const Menu = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 pt-32 pb-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Our Menu</h1>
+        <div className="text-center mb-12 animate-fade-in">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Our Menu
+          </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Discover our wide selection of freshly baked goods, made with love and the finest ingredients
           </p>
         </div>
 
         <Tabs value={selectedCategory} onValueChange={handleCategoryChange} className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto gap-2 bg-secondary/30 p-2">
-            <TabsTrigger value="all" className="whitespace-nowrap" onClick={() => handleCategoryChange("all")}>All Items</TabsTrigger>
+          <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto gap-2 bg-secondary/30 p-2 animate-fade-in-up">
+            <TabsTrigger 
+              value="all" 
+              className="whitespace-nowrap transition-all duration-300 data-[state=active]:shadow-md" 
+              onClick={() => handleCategoryChange("all")}
+            >
+              All Items
+            </TabsTrigger>
             {topCategories.map((category) => (
-              <TabsTrigger key={category.id} value={category.id} className="whitespace-nowrap">
+              <TabsTrigger 
+                key={category.id} 
+                value={category.id} 
+                className="whitespace-nowrap transition-all duration-300 data-[state=active]:shadow-md"
+              >
                 {category.name}
               </TabsTrigger>
             ))}
           </TabsList>
 
           {/* Subcategory pills */}
-          {selectedCategory !== "all" && subcategoriesMap[selectedCategory] && (
-            <div className="mt-4 flex gap-2 flex-wrap">
+          {selectedCategory !== "all" && subcategoriesMap[selectedCategory] && subcategoriesMap[selectedCategory].length > 0 && (
+            <div className="mt-4 flex gap-2 flex-wrap animate-slide-in-right">
               <Badge
                 variant={selectedSubcategory === null ? "default" : "outline"}
-                className="cursor-pointer"
+                className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md"
                 onClick={() => setSelectedSubcategory(null)}
               >
                 All {categories.find(c => c.id === selectedCategory)?.name}
@@ -291,7 +303,7 @@ const Menu = () => {
                 <Badge
                   key={sub.id}
                   variant={selectedSubcategory === sub.id ? "default" : "outline"}
-                  className="cursor-pointer"
+                  className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md"
                   onClick={() => setSelectedSubcategory(sub.id)}
                 >
                   {sub.name}
@@ -355,37 +367,41 @@ const Menu = () => {
 
           <div className="mt-8">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              {filteredProducts.map((product, index) => (
+                <Card 
+                  key={product.id} 
+                  className={`overflow-hidden hover-lift card-shine opacity-0 animate-fade-in-up stagger-${(index % 5) + 1}`}
+                >
                   {/* Image (conditional) */}
-                  {product.image_url_resolved ? (
-                    <div className="w-full h-48 bg-gray-100">
+                  <div className="relative overflow-hidden group">
+                    {product.image_url_resolved ? (
                       <img
                         src={product.image_url_resolved}
                         alt={product.name}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                         loading="lazy"
                         onError={(e) => {
-                          // fallback to placeholder on any load error
                           (e.currentTarget as HTMLImageElement).src = PLACEHOLDER;
                         }}
                       />
-                    </div>
-                  ) : (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center text-sm text-muted-foreground">
-                      <img src={PLACEHOLDER} alt="placeholder" className="w-full h-48 object-cover" />
-                    </div>
-                  )}
+                    ) : (
+                      <img src={PLACEHOLDER} alt="placeholder" className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
 
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <CardTitle className="text-lg">{product.name}</CardTitle>
-                      <Badge variant={product.is_available ? "default" : "secondary"}>
+                      <Badge 
+                        variant={product.is_available ? "default" : "secondary"}
+                        className={product.is_available ? "animate-pulse-soft" : ""}
+                      >
                         {product.is_available ? "Available" : "Out of Stock"}
                       </Badge>
                     </div>
                     {product.description && (
-                      <CardDescription className="text-sm">{product.description}</CardDescription>
+                      <CardDescription className="text-sm line-clamp-2">{product.description}</CardDescription>
                     )}
                     {product.average_rating && product.review_count ? (
                       <div className="flex items-center gap-2 mt-2">
@@ -414,11 +430,11 @@ const Menu = () => {
 
                   <CardFooter>
                     <Button
-                      className="w-full"
+                      className="w-full group/btn transition-all duration-300 hover:shadow-lg hover:shadow-primary/25"
                       disabled={!product.is_available}
                       onClick={() => setSelectedProduct(product)}
                     >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      <ShoppingCart className="mr-2 h-4 w-4 transition-transform duration-300 group-hover/btn:scale-110" />
                       Add to Cart
                     </Button>
                   </CardFooter>
@@ -427,7 +443,7 @@ const Menu = () => {
             </div>
 
             {filteredProducts.length === 0 && (
-              <div className="text-center py-12">
+              <div className="text-center py-12 animate-fade-in">
                 <p className="text-muted-foreground text-lg">No products found in this category</p>
               </div>
             )}
