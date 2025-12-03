@@ -15,6 +15,8 @@ import { DeliveryPersonManagement } from "@/components/dashboard/DeliveryPersonM
 import { ProductForm } from "@/components/dashboard/ProductForm";
 import { ProductCard } from "@/components/dashboard/ProductCard";
 import { BulkProductActions } from "@/components/dashboard/BulkProductActions";
+import { CategoryForm } from "@/components/dashboard/CategoryForm";
+import { CategoryCard } from "@/components/dashboard/CategoryCard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -27,8 +29,11 @@ const Dashboard = () => {
   const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -362,6 +367,82 @@ const Dashboard = () => {
     setSelectedProducts(newSelection);
   };
 
+  const handleAddCategory = async (formData: any) => {
+    const { error } = await supabase
+      .from("categories")
+      .insert([{
+        name: formData.name,
+        display_order: formData.display_order,
+        parent_id: formData.parent_id,
+        has_egg_option: formData.has_egg_option,
+      }]);
+
+    if (error) {
+      toast.error("Failed to add category");
+      return;
+    }
+
+    toast.success("Category added successfully");
+    setIsAddCategoryDialogOpen(false);
+    fetchCategories();
+  };
+
+  const handleEditCategory = async (formData: any) => {
+    if (!editingCategory) return;
+
+    const { error } = await supabase
+      .from("categories")
+      .update({
+        name: formData.name,
+        display_order: formData.display_order,
+        parent_id: formData.parent_id,
+        has_egg_option: formData.has_egg_option,
+      })
+      .eq("id", editingCategory.id);
+
+    if (error) {
+      toast.error("Failed to update category");
+      return;
+    }
+
+    toast.success("Category updated successfully");
+    setIsEditCategoryDialogOpen(false);
+    setEditingCategory(null);
+    fetchCategories();
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    // Check if category has subcategories
+    const hasSubcategories = categories.some(c => c.parent_id === categoryId);
+    if (hasSubcategories) {
+      toast.error("Cannot delete category with subcategories. Delete subcategories first.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("categories")
+      .delete()
+      .eq("id", categoryId);
+
+    if (error) {
+      toast.error("Failed to delete category");
+      return;
+    }
+
+    toast.success("Category deleted successfully");
+    fetchCategories();
+  };
+
+  const getSubcategoriesCount = (categoryId: string) => {
+    return categories.filter(c => c.parent_id === categoryId).length;
+  };
+
+  const getParentName = (parentId: string | null) => {
+    if (!parentId) return undefined;
+    const parent = categories.find(c => c.id === parentId);
+    return parent?.name;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -400,6 +481,7 @@ const Dashboard = () => {
           <TabsList>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             {isAdmin && <TabsTrigger value="products">Products</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="categories">Categories</TabsTrigger>}
             {isAdmin && <TabsTrigger value="delivery">Delivery Personnel</TabsTrigger>}
           </TabsList>
 
@@ -505,6 +587,112 @@ const Dashboard = () => {
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
                     No products found. Add your first product!
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="categories" className="mt-6">
+              <div className="mb-6">
+                <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Category
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-background">
+                    <DialogHeader>
+                      <DialogTitle>Add New Category</DialogTitle>
+                      <DialogDescription>Create a new category or subcategory for your menu</DialogDescription>
+                    </DialogHeader>
+                    <CategoryForm
+                      categories={categories}
+                      onSubmit={handleAddCategory}
+                      submitLabel="Add Category"
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Top-level categories */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Main Categories</h3>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {categories
+                      .filter((c) => !c.parent_id)
+                      .sort((a, b) => a.display_order - b.display_order)
+                      .map((category) => (
+                        <CategoryCard
+                          key={category.id}
+                          category={category}
+                          subcategoriesCount={getSubcategoriesCount(category.id)}
+                          onEdit={() => {
+                            setEditingCategory(category);
+                            setIsEditCategoryDialogOpen(true);
+                          }}
+                          onDelete={() => handleDeleteCategory(category.id)}
+                        />
+                      ))}
+                  </div>
+                </div>
+
+                {/* Subcategories */}
+                {categories.some((c) => c.parent_id) && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Subcategories</h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {categories
+                        .filter((c) => c.parent_id)
+                        .sort((a, b) => a.display_order - b.display_order)
+                        .map((category) => (
+                          <CategoryCard
+                            key={category.id}
+                            category={category}
+                            parentName={getParentName(category.parent_id)}
+                            subcategoriesCount={0}
+                            onEdit={() => {
+                              setEditingCategory(category);
+                              setIsEditCategoryDialogOpen(true);
+                            }}
+                            onDelete={() => handleDeleteCategory(category.id)}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
+                <DialogContent className="bg-background">
+                  <DialogHeader>
+                    <DialogTitle>Edit Category</DialogTitle>
+                    <DialogDescription>Update category details</DialogDescription>
+                  </DialogHeader>
+                  {editingCategory && (
+                    <CategoryForm
+                      categories={categories}
+                      initialData={{
+                        name: editingCategory.name,
+                        display_order: editingCategory.display_order,
+                        parent_id: editingCategory.parent_id,
+                        has_egg_option: editingCategory.has_egg_option || false,
+                      }}
+                      editingCategoryId={editingCategory.id}
+                      onSubmit={handleEditCategory}
+                      submitLabel="Update Category"
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+
+              {categories.length === 0 && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    No categories found. Add your first category!
                   </CardContent>
                 </Card>
               )}
