@@ -42,6 +42,7 @@ interface Product {
   is_sold_by_weight: boolean;
   pricing_type?: "unit" | "per_kg" | "fixed_weight";
   price_display_unit?: string;
+  egg_type?: "egg" | "eggless" | "both";
   average_rating?: number;
   review_count?: number;
 }
@@ -187,8 +188,7 @@ const Menu = () => {
 
     if (categoryAllowsEggFilter && eggFilter !== "all") {
       filtered = filtered.filter((p) => {
-        const eggType = (p as any).egg_type;
-        if (!eggType) return true;
+        const eggType = p.egg_type || "both";
 
         if (eggFilter === "eggless") {
           return eggType === "eggless" || eggType === "both";
@@ -440,6 +440,7 @@ const Menu = () => {
         open={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         onAddToCart={handleAddToCart}
+        eggFilter={eggFilter}
       />
 
       <Footer />
