@@ -198,6 +198,8 @@ export type Database = {
           is_sold_by_weight: boolean | null
           min_weight_grams: number | null
           name: string
+          price_display_unit: string | null
+          pricing_type: string
           updated_at: string | null
           variations: Json | null
         }
@@ -214,6 +216,8 @@ export type Database = {
           is_sold_by_weight?: boolean | null
           min_weight_grams?: number | null
           name: string
+          price_display_unit?: string | null
+          pricing_type?: string
           updated_at?: string | null
           variations?: Json | null
         }
@@ -230,6 +234,8 @@ export type Database = {
           is_sold_by_weight?: boolean | null
           min_weight_grams?: number | null
           name?: string
+          price_display_unit?: string | null
+          pricing_type?: string
           updated_at?: string | null
           variations?: Json | null
         }

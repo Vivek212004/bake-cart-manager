@@ -21,6 +21,8 @@ interface Product {
   variations: any;
   category_id: string;
   is_sold_by_weight: boolean;
+  pricing_type?: "unit" | "per_kg" | "fixed_weight";
+  price_display_unit?: string;
 }
 
 interface ProductCustomizationDialogProps {
@@ -227,7 +229,7 @@ export const ProductCustomizationDialog = ({
   if (!product) return null;
 
   const shouldShowCustomWeight =
-    product.is_sold_by_weight &&
+    (product.pricing_type === "per_kg" || product.is_sold_by_weight) &&
     selectedVariation &&
     (!hasNestedVariations || (hasNestedVariations && !!selectedWeightOption));
 
