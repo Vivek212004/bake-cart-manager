@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ interface Product {
   is_sold_by_weight: boolean;
   pricing_type?: "unit" | "per_kg" | "fixed_weight";
   price_display_unit?: string;
+  egg_type?: "egg" | "eggless" | "both";
 }
 
 interface ProductCustomizationDialogProps {
@@ -35,6 +36,7 @@ interface ProductCustomizationDialogProps {
     price?: number,
     weightInKg?: number
   ) => void;
+  eggFilter?: string;
 }
 
 type NormalizedVariation = {
@@ -100,20 +102,41 @@ export const ProductCustomizationDialog = ({
   open,
   onClose,
   onAddToCart,
+  eggFilter,
 }: ProductCustomizationDialogProps) => {
   const [selectedVariation, setSelectedVariation] = useState<string>("");
   const [selectedWeightOption, setSelectedWeightOption] = useState<string>("");
   const [customWeight, setCustomWeight] = useState<string>("1");
   const [useCustomWeight, setUseCustomWeight] = useState<boolean>(false);
   const [reviewsKey, setReviewsKey] = useState(0);
+  const [selectedEggOption, setSelectedEggOption] = useState<string>("");
 
   const variationsArray = getVariationsArray(product);
+  
+  // Determine if we need to show egg/eggless selection
+  const productEggType = product?.egg_type || "both";
+  const showEggSelection = productEggType === "both";
+  
+  // If filter is applied and product has both, pre-select based on filter
+  const getDefaultEggOption = () => {
+    if (productEggType !== "both") return productEggType;
+    if (eggFilter === "egg" || eggFilter === "eggless") return eggFilter;
+    return "";
+  };
+
+  // Initialize egg option when dialog opens
+  useEffect(() => {
+    if (open && product) {
+      setSelectedEggOption(getDefaultEggOption());
+    }
+  }, [open, product, eggFilter]);
 
   const resetDialog = () => {
     setSelectedVariation("");
     setSelectedWeightOption("");
     setCustomWeight("1");
     setUseCustomWeight(false);
+    setSelectedEggOption(getDefaultEggOption());
   };
 
   const handleClose = () => {
@@ -181,8 +204,14 @@ export const ProductCustomizationDialog = ({
   const handleAddToCart = () => {
     if (!product) return;
 
-    if (!selectedVariation || !selectedVar) {
-      toast.error("Please select a type (Egg/Eggless / Size / Weight)");
+    // Validate egg selection if needed
+    if (showEggSelection && !selectedEggOption) {
+      toast.error("Please select Egg or Eggless option");
+      return;
+    }
+
+    if (variationsArray.length > 0 && (!selectedVariation || !selectedVar)) {
+      toast.error("Please select a variation");
       return;
     }
 
@@ -192,9 +221,12 @@ export const ProductCustomizationDialog = ({
     }
 
     let finalPrice = product.base_price;
-    let variationDetails: string | undefined = selectedVariation;
+    let variationDetails: string | undefined = "";
     let finalWeight: number | undefined = undefined;
 
+    // Add egg option to variation details
+    const eggLabel = showEggSelection ? selectedEggOption : (product.egg_type === "egg" || product.egg_type === "eggless" ? product.egg_type : "");
+    
     const perKgPrice = getPerKgPrice();
 
     if (product.is_sold_by_weight && useCustomWeight && perKgPrice != null) {
@@ -205,24 +237,28 @@ export const ProductCustomizationDialog = ({
       }
       finalWeight = weightNum;
       finalPrice = perKgPrice * weightNum;
-      variationDetails = hasNestedVariations
-        ? `${selectedVariation} - Custom ${weightNum}kg`
-        : `${selectedVariation} - ${weightNum}kg`;
-    } else if (hasNestedVariations && selectedWeightOption && selectedVar.variations) {
+      const parts = [eggLabel, selectedVariation, `Custom ${weightNum}kg`].filter(Boolean);
+      variationDetails = parts.join(" - ");
+    } else if (hasNestedVariations && selectedWeightOption && selectedVar?.variations) {
       const weightVar = selectedVar.variations.find(
         (w: any) => w.weight === selectedWeightOption
       );
       if (weightVar) {
         finalPrice = Number(weightVar.price);
         finalWeight = parseWeightToKg(weightVar.weight) ?? undefined;
-        variationDetails = `${selectedVariation} - ${selectedWeightOption}`;
+        const parts = [eggLabel, selectedVariation, selectedWeightOption].filter(Boolean);
+        variationDetails = parts.join(" - ");
       }
-    } else if (!hasNestedVariations) {
-      const basePrice = Number(selectedVar.price) || product.base_price;
-      finalPrice = basePrice;
+    } else if (variationsArray.length > 0 && selectedVar) {
+      finalPrice = Number(selectedVar.price) || product.base_price;
+      const parts = [eggLabel, selectedVariation].filter(Boolean);
+      variationDetails = parts.join(" - ");
+    } else {
+      // No variations, just egg option
+      variationDetails = eggLabel || undefined;
     }
 
-    onAddToCart(product, variationDetails, finalPrice, finalWeight);
+    onAddToCart(product, variationDetails || undefined, finalPrice, finalWeight);
     handleClose();
   };
 
@@ -249,6 +285,36 @@ export const ProductCustomizationDialog = ({
           </TabsList>
 
           <TabsContent value="customize" className="space-y-6 pt-4">
+            {/* Egg/Eggless Selection */}
+            {showEggSelection && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">
+                  Select Egg/Eggless
+                </Label>
+                <RadioGroup
+                  value={selectedEggOption}
+                  onValueChange={setSelectedEggOption}
+                >
+                  <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="egg" id="egg-option" />
+                      <Label htmlFor="egg-option" className="cursor-pointer font-normal">
+                        With Egg
+                      </Label>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="eggless" id="eggless-option" />
+                      <Label htmlFor="eggless-option" className="cursor-pointer font-normal">
+                        Eggless
+                      </Label>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
             {/* Step 1: Type / Size / Weight label selection */}
             {variationsArray.length > 0 && (
               <div className="space-y-3">

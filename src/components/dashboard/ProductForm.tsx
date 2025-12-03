@@ -184,18 +184,23 @@ export const ProductForm = ({ initialData, categories, onSubmit, submitLabel }: 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="egg_type">Product Type</Label>
-        <select
-          id="egg_type"
+        <Label htmlFor="egg_type">Egg/Eggless Option</Label>
+        <Select
           value={formData.egg_type}
-          onChange={(e) => setFormData({ ...formData, egg_type: e.target.value as "egg" | "eggless" | "both" })}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          required
+          onValueChange={(value) => setFormData({ ...formData, egg_type: value as "egg" | "eggless" | "both" })}
         >
-          <option value="both">Both (Egg & Eggless)</option>
-          <option value="egg">Egg Only</option>
-          <option value="eggless">Eggless Only</option>
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select egg type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="both">Both (Egg & Eggless available)</SelectItem>
+            <SelectItem value="egg">Egg Only</SelectItem>
+            <SelectItem value="eggless">Eggless Only</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          "Both" allows customers to choose between Egg and Eggless versions
+        </p>
       </div>
 
       {initialData && (
