@@ -272,6 +272,8 @@ const Dashboard = () => {
         category_id: formData.category_id,
         is_available: true,
         is_sold_by_weight: formData.is_sold_by_weight,
+        pricing_type: formData.pricing_type || "unit",
+        price_display_unit: formData.price_display_unit || null,
         egg_type: formData.egg_type,
         variations: formData.variations || null,
       }]);
@@ -298,6 +300,8 @@ const Dashboard = () => {
         category_id: formData.category_id,
         is_available: formData.is_available,
         is_sold_by_weight: formData.is_sold_by_weight,
+        pricing_type: formData.pricing_type || "unit",
+        price_display_unit: formData.price_display_unit || null,
         egg_type: formData.egg_type,
         variations: formData.variations || null,
       })
@@ -483,6 +487,8 @@ const Dashboard = () => {
                         base_price: editingProduct.base_price.toString(),
                         category_id: editingProduct.category_id,
                         is_sold_by_weight: editingProduct.is_sold_by_weight,
+                        pricing_type: editingProduct.pricing_type || (editingProduct.is_sold_by_weight ? "per_kg" : "unit"),
+                        price_display_unit: editingProduct.price_display_unit || "",
                         egg_type: editingProduct.egg_type,
                         variations: editingProduct.variations || [],
                         is_available: editingProduct.is_available,

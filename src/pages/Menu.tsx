@@ -40,6 +40,8 @@ interface Product {
   variations: any;
   category_id: string;
   is_sold_by_weight: boolean;
+  pricing_type?: "unit" | "per_kg" | "fixed_weight";
+  price_display_unit?: string;
   average_rating?: number;
   review_count?: number;
 }
@@ -202,6 +204,21 @@ const Menu = () => {
 
   const formatPrice = (price: number) => {
     return `₹${price.toFixed(0)}`;
+  };
+
+  const getPriceDisplay = (product: Product) => {
+    const pricingType = product.pricing_type || (product.is_sold_by_weight ? "per_kg" : "unit");
+    const displayUnit = product.price_display_unit;
+    
+    switch (pricingType) {
+      case "per_kg":
+        return { suffix: displayUnit || "/kg", showFrom: false };
+      case "fixed_weight":
+        return { suffix: displayUnit ? ` ${displayUnit}` : "", showFrom: true };
+      case "unit":
+      default:
+        return { suffix: displayUnit ? ` ${displayUnit}` : "", showFrom: false };
+    }
   };
 
   const handleAddToCart = (product: Product, variation?: string, price?: number, weightInKg?: number) => {
@@ -382,10 +399,16 @@ const Menu = () => {
 
                   <CardContent className="pb-3">
                     <div className="space-y-2">
-                      <p className="text-2xl font-bold text-primary">
-                        {formatPrice(product.base_price)}
-                        {product.is_sold_by_weight && <span className="text-base text-muted-foreground">/kg</span>}
-                      </p>
+                      {(() => {
+                        const priceDisplay = getPriceDisplay(product);
+                        return (
+                          <p className="text-2xl font-bold text-primary">
+                            {priceDisplay.showFrom && <span className="text-base text-muted-foreground">from </span>}
+                            {formatPrice(product.base_price)}
+                            {priceDisplay.suffix && <span className="text-base text-muted-foreground">{priceDisplay.suffix}</span>}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </CardContent>
 
