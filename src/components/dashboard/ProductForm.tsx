@@ -170,15 +170,31 @@ export const ProductForm = ({ initialData, categories, onSubmit, submitLabel }: 
           onValueChange={(value) => setFormData({ ...formData, category_id: value })}
           required
         >
-          <SelectTrigger>
+          <SelectTrigger className="bg-background">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
-          <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
+          <SelectContent className="bg-popover z-50">
+            {/* Top-level categories */}
+            {categories
+              .filter((c) => !c.parent_id)
+              .sort((a, b) => a.display_order - b.display_order)
+              .map((category) => {
+                const subcategories = categories.filter((c) => c.parent_id === category.id);
+                return (
+                  <div key={category.id}>
+                    <SelectItem value={category.id} className="font-semibold">
+                      {category.name}
+                    </SelectItem>
+                    {subcategories
+                      .sort((a, b) => a.display_order - b.display_order)
+                      .map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id} className="pl-8">
+                          ↳ {sub.name}
+                        </SelectItem>
+                      ))}
+                  </div>
+                );
+              })}
           </SelectContent>
         </Select>
       </div>
