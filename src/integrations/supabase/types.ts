@@ -18,22 +18,36 @@ export type Database = {
         Row: {
           created_at: string | null
           display_order: number
+          has_egg_option: boolean | null
           id: string
           name: string
+          parent_id: string | null
         }
         Insert: {
           created_at?: string | null
           display_order?: number
+          has_egg_option?: boolean | null
           id?: string
           name: string
+          parent_id?: string | null
         }
         Update: {
           created_at?: string | null
           display_order?: number
+          has_egg_option?: boolean | null
           id?: string
           name?: string
+          parent_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
