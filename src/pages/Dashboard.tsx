@@ -250,6 +250,44 @@ const Dashboard = () => {
     toast.success("Order status updated");
   };
 
+  const handleCancelOrder = async (orderId: string) => {
+    // Check if order is within 5 minute cancellation window
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      toast.error("Order not found");
+      return;
+    }
+
+    const createdAt = new Date(order.created_at).getTime();
+    const now = Date.now();
+    const elapsedMs = now - createdAt;
+    const windowMs = 5 * 60 * 1000; // 5 minutes
+
+    if (elapsedMs > windowMs) {
+      toast.error("Cancellation window has expired");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", orderId);
+
+    if (error) {
+      toast.error("Failed to cancel order");
+      return;
+    }
+
+    // Update local state
+    setOrders((prevOrders) =>
+      prevOrders.map((o) =>
+        o.id === orderId ? { ...o, status: "cancelled" } : o
+      )
+    );
+
+    toast.success("Order cancelled successfully");
+  };
+
   const handleAssignDeliveryPerson = async (orderId: string, deliveryPersonId: string) => {
     const { error } = await supabase
       .from("orders")
@@ -495,6 +533,7 @@ const Dashboard = () => {
                   deliveryPersons={deliveryPersons}
                   onUpdateStatus={isAdmin ? handleUpdateOrderStatus : undefined}
                   onAssignDeliveryPerson={isAdmin ? handleAssignDeliveryPerson : undefined}
+                  onCancelOrder={!isAdmin ? handleCancelOrder : undefined}
                 />
               ))}
               

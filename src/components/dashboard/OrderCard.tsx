@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, User } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { MapPin, User, X } from "lucide-react";
 
 interface OrderCardProps {
   order: any;
@@ -10,15 +12,46 @@ interface OrderCardProps {
   deliveryPersons?: any[];
   onUpdateStatus?: (orderId: string, newStatus: string) => void;
   onAssignDeliveryPerson?: (orderId: string, deliveryPersonId: string) => void;
+  onCancelOrder?: (orderId: string) => void;
 }
+
+const CANCEL_WINDOW_MINUTES = 5;
 
 export const OrderCard = ({ 
   order, 
   isAdmin, 
   deliveryPersons = [],
   onUpdateStatus,
-  onAssignDeliveryPerson 
+  onAssignDeliveryPerson,
+  onCancelOrder
 }: OrderCardProps) => {
+  const [canCancel, setCanCancel] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+
+  useEffect(() => {
+    const checkCancelWindow = () => {
+      const createdAt = new Date(order.created_at).getTime();
+      const now = Date.now();
+      const elapsedMs = now - createdAt;
+      const windowMs = CANCEL_WINDOW_MINUTES * 60 * 1000;
+      const remainingMs = windowMs - elapsedMs;
+
+      if (remainingMs > 0 && order.status !== 'cancelled' && order.status !== 'delivered') {
+        setCanCancel(true);
+        const minutes = Math.floor(remainingMs / 60000);
+        const seconds = Math.floor((remainingMs % 60000) / 1000);
+        setTimeRemaining(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      } else {
+        setCanCancel(false);
+        setTimeRemaining("");
+      }
+    };
+
+    checkCancelWindow();
+    const interval = setInterval(checkCancelWindow, 1000);
+    return () => clearInterval(interval);
+  }, [order.created_at, order.status]);
+
   const openInGoogleMaps = (address: string) => {
     const encodedAddress = encodeURIComponent(address);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
@@ -66,6 +99,38 @@ export const OrderCard = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Cancel Order Button for Customers */}
+          {!isAdmin && canCancel && onCancelOrder && (
+            <div className="bg-muted/50 border border-border rounded-lg p-3 flex items-center justify-between">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Cancel within: </span>
+                <span className="font-semibold text-destructive">{timeRemaining}</span>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel Order
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to cancel this order? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>No, keep order</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onCancelOrder(order.id)}>
+                      Yes, cancel order
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+
           {/* Customer Details */}
           <div className="space-y-1">
             <p className="text-sm font-semibold">Customer Details:</p>
