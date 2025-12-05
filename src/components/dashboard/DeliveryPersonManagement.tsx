@@ -49,6 +49,10 @@ export const DeliveryPersonManagement = ({
       }
 
       if (data?.error) {
+        // Check for specific error messages
+        if (data.error.includes("email address has already been registered")) {
+          throw new Error("A user with this email already exists. Please use a different email.");
+        }
         throw new Error(data.error);
       }
 
@@ -58,7 +62,13 @@ export const DeliveryPersonManagement = ({
       onRefresh();
     } catch (error: any) {
       console.error("Error creating delivery person:", error);
-      toast.error(error.message || "Failed to create delivery person");
+      const errorMessage = error.message || "Failed to create delivery person";
+      // Handle edge function error response
+      if (errorMessage.includes("email address has already been registered") || errorMessage.includes("email_exists")) {
+        toast.error("A user with this email already exists. Please use a different email address.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsCreating(false);
     }
