@@ -197,8 +197,15 @@ export const OrderCard = ({
             <p className="font-semibold">Items:</p>
             {order.order_items?.map((item: any) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.product_name} x {item.quantity}</span>
-                <span>₹{item.subtotal}</span>
+                <div className="flex-1">
+                  <span>{item.product_name} x {item.quantity}</span>
+                  {item.variation_details && (
+                    <p className="text-xs text-muted-foreground ml-2">
+                      ({item.variation_details})
+                    </p>
+                  )}
+                </div>
+                <span className="text-right">₹{item.subtotal}</span>
               </div>
             ))}
           </div>
