@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AnalyticsCards } from "@/components/dashboard/AnalyticsCards";
+import { OrdersAnalytics } from "@/components/dashboard/OrdersAnalytics";
 import { OrderCard } from "@/components/dashboard/OrderCard";
 import { DeliveryPersonView } from "@/components/dashboard/DeliveryPersonView";
 import { DeliveryPersonManagement } from "@/components/dashboard/DeliveryPersonManagement";
@@ -513,7 +513,7 @@ const Dashboard = () => {
           {isAdmin ? "Admin Dashboard" : "My Orders"}
         </h1>
 
-        {isAdmin && <AnalyticsCards orders={orders} />}
+        {isAdmin && <OrdersAnalytics orders={orders} />}
 
         <Tabs defaultValue="orders" className="w-full">
           <TabsList>
