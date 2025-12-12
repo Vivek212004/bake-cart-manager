@@ -15,7 +15,7 @@ interface ProductFormData {
   is_sold_by_weight: boolean;
   pricing_type: "unit" | "per_kg" | "fixed_weight";
   price_display_unit: string;
-  egg_type: "egg" | "eggless" | "both";
+  egg_type: "egg" | "eggless" | "both" | "none";
   variations?: ProductVariation[];
   is_available?: boolean;
 }
@@ -203,19 +203,20 @@ export const ProductForm = ({ initialData, categories, onSubmit, submitLabel }: 
         <Label htmlFor="egg_type">Egg/Eggless Option</Label>
         <Select
           value={formData.egg_type}
-          onValueChange={(value) => setFormData({ ...formData, egg_type: value as "egg" | "eggless" | "both" })}
+          onValueChange={(value) => setFormData({ ...formData, egg_type: value as "egg" | "eggless" | "both" | "none" })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select egg type" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="none">None (Not applicable)</SelectItem>
             <SelectItem value="both">Both (Egg & Eggless available)</SelectItem>
             <SelectItem value="egg">Egg Only</SelectItem>
             <SelectItem value="eggless">Eggless Only</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          "Both" allows customers to choose between Egg and Eggless versions
+          Select "None" for products where egg/eggless option is not relevant
         </p>
       </div>
 

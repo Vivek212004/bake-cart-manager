@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 export interface ProductVariation {
   id: string;
@@ -18,6 +20,7 @@ interface VariationManagerProps {
 
 export const VariationManager = ({ variations, onVariationsChange }: VariationManagerProps) => {
   const [newVariation, setNewVariation] = useState({ name: "", price_adjustment: "" });
+  const [jsonInput, setJsonInput] = useState("");
 
   const handleAddVariation = () => {
     if (!newVariation.name || !newVariation.price_adjustment) return;
@@ -34,6 +37,35 @@ export const VariationManager = ({ variations, onVariationsChange }: VariationMa
 
   const handleRemoveVariation = (id: string) => {
     onVariationsChange(variations.filter((v) => v.id !== id));
+  };
+
+  const handleJsonImport = () => {
+    if (!jsonInput.trim()) {
+      toast.error("Please enter JSON data");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(jsonInput);
+      const variationsArray = Array.isArray(parsed) ? parsed : [parsed];
+      
+      const importedVariations: ProductVariation[] = variationsArray.map((v: any) => ({
+        id: v.id || crypto.randomUUID(),
+        name: v.name || "",
+        price_adjustment: typeof v.price_adjustment === "number" ? v.price_adjustment : parseFloat(v.price_adjustment) || 0,
+      })).filter((v: ProductVariation) => v.name);
+
+      if (importedVariations.length === 0) {
+        toast.error("No valid variations found in JSON");
+        return;
+      }
+
+      onVariationsChange([...variations, ...importedVariations]);
+      setJsonInput("");
+      toast.success(`Imported ${importedVariations.length} variation(s)`);
+    } catch (error) {
+      toast.error("Invalid JSON format. Expected: [{\"name\": \"500g\", \"price_adjustment\": 50}]");
+    }
   };
 
   return (
@@ -64,7 +96,25 @@ export const VariationManager = ({ variations, onVariationsChange }: VariationMa
           </div>
         )}
 
+        {/* JSON Import Section */}
         <div className="space-y-3 pt-4 border-t">
+          <Label>Import from JSON</Label>
+          <Textarea
+            placeholder='[{"name": "500g", "price_adjustment": 50}, {"name": "1kg", "price_adjustment": 150}]'
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+            rows={3}
+            className="font-mono text-sm"
+          />
+          <Button type="button" onClick={handleJsonImport} className="w-full" variant="secondary">
+            <Upload className="h-4 w-4 mr-2" />
+            Import JSON Variations
+          </Button>
+        </div>
+
+        {/* Manual Add Section */}
+        <div className="space-y-3 pt-4 border-t">
+          <Label className="text-muted-foreground">Or add manually</Label>
           <div className="space-y-2">
             <Label htmlFor="var-name">Variation Name</Label>
             <Input
